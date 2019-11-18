@@ -4,7 +4,7 @@
 
 {% block contents %}
     <div class="bs-docs-section clearfix article" id="article">
-        <i style="font-size: 80%;">Published by {{ article.my_project.firstname }} {{ article.my_project.lastname }}  on {{ article.created_at|date:"l d F Y" }}</i>
+        <i style="font-size: 80%;">Published by {{ article.owner.firstname }} {{ article.owner.lastname }}  on {{ article.created_at|date:"l d F Y" }}</i><br>
         {% autoescape off %}{{ article.contents }}{% endautoescape %}
         <h6>Last modified: {{ article.modified_at|date:"l d F Y" }}</h6>
     </div>

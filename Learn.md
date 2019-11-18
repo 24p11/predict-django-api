@@ -11,3 +11,4 @@
 * Runserver vs WSGI
 * Things to know?
   * Updates? (Pypi - Breaking changes) https://docs.djangoproject.com/en/dev/internals/release-process/
+ 

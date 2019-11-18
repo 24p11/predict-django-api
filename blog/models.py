@@ -15,7 +15,7 @@ class Article(BaseModel):
     )
     state = models.CharField(max_length=2, choices=STATE_CHOICES, default='DR')
 
-    title = models.CharField(max_length=50)
+    title = models.CharField(max_length=30)
     contents = models.TextField()
 
 

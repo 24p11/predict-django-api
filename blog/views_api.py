@@ -25,29 +25,29 @@ class ArticleViewSet(UserObjectsRestrictedViewSet):
 
     filterset_fields = ('owner_id', 'state')
     ordering_fields = ('created_at', 'modified_at', 'owner_id', 'state', 'title')
-    ordering = ('-modifier_at',)
+    ordering = ('-modified_at',)
     search_fields = ('$contents', '$title',)
 
     def get_permissions(self):
-        return [AllowAny()]
-        # if self.request.method in ['GET']:
-        #     return [AllowAny()]
-        # elif self.request.method in ['POST']:
-        #     return [IsAuthenticated()]
-        # elif self.request.method in ['PATCH', 'DELETE']:
-        #     return OR(IsAdminOrOwner())
-        # return []
+        if self.request.method in ['GET', 'PATCH', 'PUT', 'POST', 'DELETE']:
+            return [AllowAny()]
+        elif self.request.method in ['PUT']:
+            return [IsAuthenticated()]
+        elif self.request.method in ['PATCH']:
+            return OR(IsAdminOrOwner())
+        return []
 
 
 class CommentViewSet(UserObjectsRestrictedViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    http_method_names = ['get', 'create', 'post', 'patch', 'put', 'delete']
+    http_method_names = ['get', 'create', 'delete']
 
     filterset_fields = ('article_id', 'owner_id')
     ordering_fields = ('created_at', 'modified_at', 'article_id', 'owner_id')
-    ordering = ('-modifier_at',)
-    search_fields = ('$',)
+    ordering = ('-modified_at',)
+    search_fields = ('$contents',)
 
     def get_permissions(self):
         return [AllowAny()]
+

@@ -8,10 +8,13 @@ from users.serializers import UserSerializer
 
 class UserObjectsRestrictedViewSet(BaseViewSet):
     def get_queryset(self):
+        # FIXME:
+        if self.request.user.is_anonymous:
+            return self.__class__.queryset
         if self.request.user.is_superuser:
             return self.__class__.queryset
         if self.__class__ == UserViewSet:
-            return self.__class__.queryset.filter(uuid=self.request.user.uuid)
+            return self.__class__.queryset.filter(owner=self.request.user)
         return self.__class__.queryset.filter(owner=self.request.user)
 
 

@@ -21,6 +21,7 @@ def list_articles(request):
         result_years.append(Year(year, articles))
 
     context = {
+        'articles': articles,
         'years': result_years
     }
     return render(
