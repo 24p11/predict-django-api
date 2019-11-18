@@ -23,7 +23,7 @@ python manage.py makemigrations blog
 python manage.py migrate
 ```
 
-### Load base data
+### Load base data (TODO)
 
 ```
 python manage.py loaddata my_project/fixtures/data.json
