@@ -39,7 +39,7 @@ class UserViewSet(UserObjectsRestrictedViewSet):
     #     return serializer_class
 
     def get_permissions(self):
-        return [AllowAny()]
+        return [IsAdmin()]
         # if self.request.method in ['GET']:
         #     return OR(AllowAny())
         # elif self.request.method in ['DELETE']:
