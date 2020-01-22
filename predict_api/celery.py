@@ -4,9 +4,9 @@ from celery import Celery
 
 # set the default Django settings module for the 'celery' program.
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'my_project.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'predict_api.settings')
 
-app = Celery('my_project')
+app = Celery('predict_api')
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
@@ -21,7 +21,7 @@ app.autodiscover_tasks()
 #
 # app.conf.beat_schedule = {
 #     'add-every-30-seconds': {
-#         'task': 'my_project.celery.import_i2b2',
+#         'task': 'predict_api.celery.import_i2b2',
 #         'schedule': 5.0
 #     },
 # app.conf.timezone = 'UTC'
