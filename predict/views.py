@@ -9,7 +9,7 @@ import json
 import uuid
 import time
 
-db = redis.Redis(host='localhost')
+db = redis.Redis(host='redis')
 SURGERY_QUEUE = 'surgery_queue'
 
 @api_view(['POST'])
