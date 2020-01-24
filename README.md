@@ -1,30 +1,28 @@
-# My Project Template
+# CCAM/GHM coding web service
 
-## Installation
+## Running
 
-### Customize settings.py
-
-```
-cp my_project/example.settings.py my_project/settings.py
-"${EDITOR:-vi}" my_project/settings.py
-```
-
-### Install requirements
+To run the development version of the prediction make sure to installl `docker` and `docker-compose`. The latter can be installed using python package manager, `pip`:
 
 ```
-pip install -r requirements.txt
+> pip install docker-compose
 ```
 
-### Create database tables
+Then start all the services using the `docker-compose up` command:
 
 ```
-python manage.py makemigrations users
-python manage.py makemigrations blog
-python manage.py migrate
+> docker-compose up
 ```
 
-### Load base data (TODO)
+This command will download all required Docker images (`redis`, `postgres`), build the image with django server and install all required packages. Then, it will start the server that will listen on the port 8000.
+
+You can send request to the server using the cURL tool:
 
 ```
-python manage.py loaddata my_project/fixtures/data.json
+API_TOKEN=c454acf6900c6d8d6ce08bd785f5e74657848232
+curl -X POST http://127.0.0.1:8000/predict/ \
+    -H "Authorization: Token  ${API_TOKEN}" \
+    -d '{"text": "hello"}' \
+    -H "Content-Type: application/json"
 ```
+
