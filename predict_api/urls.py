@@ -17,23 +17,34 @@ from django.conf.urls import url
 from django.urls import include
 
 from rest_framework import routers
-from rest_framework_swagger.views import get_swagger_view
+
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
 
 from users.views import UserViewSet
 from predict.views import predict
 
 # Routers provide an easy way of automatically determining the URL conf.
 router = routers.DefaultRouter()
-router.register(r'users', UserViewSet)
+router.register(r"users", UserViewSet)
 
-schema_view = get_swagger_view(title='Predict API')
 
-internal_urls = [
-]
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Predict API",
+        default_version="v1",
+        description="Coding the medical reports",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+).with_ui("swagger")
+
+internal_urls = []
 
 urlpatterns = [
-    url(r'^', include(router.urls)),
-    url(r'^docs/', schema_view),
-    url(r'^predict/', predict),
-    url(r'^accounts/', include('rest_framework.urls')),
+    url(r"^", include(router.urls)),
+    url(r"^docs/", schema_view),
+    url(r"^predict/", predict),
+    url(r"^accounts/", include("rest_framework.urls")),
 ]

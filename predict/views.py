@@ -2,18 +2,28 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import schema
+from rest_framework.schemas import AutoSchema
 from .serializers import PredictionSerializer
 from .serializers import SurgeryReportSerializer
 import redis
 import json
 import uuid
 import time
+from drf_yasg.utils import swagger_auto_schema
 
 db = redis.Redis(host='redis')
 SURGERY_QUEUE = 'surgery_queue'
 
+@swagger_auto_schema(
+    method='post',
+    responses={
+        200: PredictionSerializer,
+        404 : 'error'},
+    request_body=SurgeryReportSerializer)
 @api_view(['POST'])
 def predict(request):
+    """Predict CCAM codes from surgical report (CRO) text"""
 
     input_data = SurgeryReportSerializer(data=request.data) 
     if input_data.is_valid():
