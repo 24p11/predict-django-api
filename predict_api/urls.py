@@ -20,6 +20,7 @@ from rest_framework import routers
 from rest_framework_swagger.views import get_swagger_view
 
 from users.views import UserViewSet
+from predict.views import predict
 
 # Routers provide an easy way of automatically determining the URL conf.
 router = routers.DefaultRouter()
@@ -33,5 +34,6 @@ internal_urls = [
 urlpatterns = [
     url(r'^', include(router.urls)),
     url(r'^docs/', schema_view),
+    url(r'^predict/', predict),
     url(r'^accounts/', include('rest_framework.urls')),
 ]
