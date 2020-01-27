@@ -6,8 +6,8 @@ services:
   redis:
     image: redis
   worker:
-    build: .
-    command: python predict/worker.py
+    build: ./tensorflow-worker
+    command: python worker.py
     depends_on:
       - redis
   web:
