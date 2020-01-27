@@ -9,7 +9,9 @@ services:
     build: 
        context: .
        dockerfile: ./tensorflow-worker/Dockerfile
-    command: python manage.py worker
+    volumes:
+      - .:/code
+    command: python manage.py surgery_classification_worker
     depends_on:
       - redis
   web:
