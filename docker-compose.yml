@@ -6,8 +6,10 @@ services:
   redis:
     image: redis
   worker:
-    build: ./tensorflow-worker
-    command: python worker.py
+    build: 
+       context: .
+       dockerfile: ./tensorflow-worker/Dockerfile
+    command: python manage.py worker
     depends_on:
       - redis
   web:

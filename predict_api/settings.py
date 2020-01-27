@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'common',
     'blog',
     'users',
+    'tensorflow-worker'
 ]
 
 MIDDLEWARE = [
@@ -188,3 +189,6 @@ SWAGGER_SETTINGS = {
       }
    }
 }
+
+REDIS_HOST = "redis"
+REDIS_SURGERY_QUEUE = "surgery_queue_2"

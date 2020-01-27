@@ -4,6 +4,7 @@ import uuid
 
 import redis
 from django.shortcuts import render
+from django.conf import settings
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, schema
@@ -12,8 +13,8 @@ from rest_framework.schemas import AutoSchema
 
 from .serializers import PredictionSerializer, SurgeryReportSerializer
 
-db = redis.Redis(host="redis")
-SURGERY_QUEUE = "surgery_queue"
+db = redis.Redis(host=settings.REDIS_HOST)
+SURGERY_QUEUE = settings.REDIS_SURGERY_QUEUE
 
 
 @swagger_auto_schema(
