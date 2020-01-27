@@ -11,11 +11,12 @@ db = redis.Redis(host=settings.REDIS_HOST)
 
 SURGERY_QUEUE = settings.REDIS_SURGERY_QUEUE
 
+
 class Command(BaseCommand):
-    help = 'Start surgery procedures classifification worker'
+    help = "Start surgery procedures classifification worker"
 
     def add_arguments(self, parser):
-        parser.add_argument('--loglevel', type=str, default='INFO')
+        parser.add_argument("--loglevel", type=str, default="INFO")
 
     def wait_for_redis(self):
         "Wait for redis being ready."
@@ -34,11 +35,10 @@ class Command(BaseCommand):
         self.model = TFBertForSequenceClassification.from_pretrained(model_name)
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
 
-
     def handle(self, *args, **options):
         "Run command"
 
-        loglevel = options['loglevel']
+        loglevel = options["loglevel"]
 
         self.wait_for_redis()
         self.load_model()
@@ -47,14 +47,14 @@ class Command(BaseCommand):
         while True:
             _, serialized_data = db.blpop(SURGERY_QUEUE)
             data = json.loads(serialized_data)
-            tokens = self.tokenizer.encode(data['text'])
+            tokens = self.tokenizer.encode(data["text"])
             tokens = tf.constant([tokens])
-            output, = self.model(tokens)
-            
-            def dummy_decoder(output): 
+            (output,) = self.model(tokens)
+
+            def dummy_decoder(output):
                 classes = np.array(["XXX123", "YYY999"])
                 i = output.numpy().argmax(1)
                 return classes[i]
 
             label = dummy_decoder(output)
-            db.set(data['id'], label[i])
+            db.set(data["id"], label[i])
