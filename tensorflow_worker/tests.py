@@ -4,7 +4,11 @@ from unittest.mock import Mock, patch
 
 from django.test import tag
 
-from tensorflow_worker.workers import RedisWorker
+try:
+    from tensorflow_worker.workers import RedisWorker
+except ModuleNotFoundError:
+    pass
+
 import redis
 
 from django.conf import settings
