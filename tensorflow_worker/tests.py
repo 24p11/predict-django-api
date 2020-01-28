@@ -10,7 +10,6 @@ import redis
 from django.conf import settings
 
 
-
 @tag("worker", "redis")
 class TestRedisWorker(TestCase):
     """Test Redis worker. 
@@ -31,8 +30,8 @@ class TestRedisWorker(TestCase):
         doc_id = "xx"
         self.db.rpush(
             settings.REDIS_SURGERY_QUEUE,
-            json.dumps({"id": doc_id, "text": "mytext"}).encode("ascii")
-            )
+            json.dumps({"id": doc_id, "text": "mytext"}).encode("ascii"),
+        )
         worker = RedisWorker()
 
         predict = Mock(return_value=["XXX111"])
@@ -41,21 +40,22 @@ class TestRedisWorker(TestCase):
 
         data = self.db.get(doc_id)
 
-        assert data == b'XXX111'
+        assert data == b"XXX111"
 
     def test_worker_with_batch(self):
         """Test worker with a batch of requests."""
 
         doc_id = "xx"
+
         def job(doc_id, text):
             return self.db.rpush(
                 settings.REDIS_SURGERY_QUEUE,
-                json.dumps({"id": doc_id, "text": text}).encode("ascii")
+                json.dumps({"id": doc_id, "text": text}).encode("ascii"),
             )
 
-        job('1', 'my text 1')
-        job('3', 'my text 3')
-        job('2', 'my text 2')
+        job("1", "my text 1")
+        job("3", "my text 3")
+        job("2", "my text 2")
 
         worker = RedisWorker()
 
@@ -66,4 +66,4 @@ class TestRedisWorker(TestCase):
 
         for i in range(1, 4):
             data = self.db.get(str(i))
-            assert data == ('CCC00' + str(i)).encode('ascii')
+            assert data == ("CCC00" + str(i)).encode("ascii")

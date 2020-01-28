@@ -6,6 +6,7 @@ import redis
 import time
 import json
 
+
 class BertClassifier:
     """Run classification with transformers BERT model."""
 
@@ -17,7 +18,7 @@ class BertClassifier:
         self.model = TFBertForSequenceClassification.from_pretrained(model_name)
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
 
-    def predict(self, documents): 
+    def predict(self, documents):
         tokens = [self.tokenizer.encode(text) for text in documents]
         tokens = tf.constant(tokens)
         (output,) = self.model(tokens)
@@ -29,6 +30,7 @@ class BertClassifier:
 
         label = dummy_decoder(output)
         return label
+
 
 class RedisWorker:
     """Worker based on Redis queue."""
@@ -49,13 +51,14 @@ class RedisWorker:
                 time.sleep(0.1)
 
     def run_loop_once(self, predict):
+
         _, serialized_data = self.db.blpop(self.QUEUE)
         texts = []
         ids = []
         while serialized_data:
             data = json.loads(serialized_data)
-            texts.append(data['text'])
-            ids.append(data['id'])
+            texts.append(data["text"])
+            ids.append(data["id"])
             serialized_data = self.db.lpop(self.QUEUE)
         labels = predict(texts)
         for label_id, label in zip(ids, labels):
