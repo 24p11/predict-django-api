@@ -37,9 +37,13 @@ class RedisWorker:
 
     QUEUE = settings.REDIS_SURGERY_QUEUE
 
-    def __init__(self):
+    def __init__(self, max_batch_size=16, queue=None):
         self.db = redis.Redis(host=settings.REDIS_HOST)
+        self.max_batch_size = max_batch_size
         self.wait_for_redis()
+
+        if queue:
+            self.QUEUE = queue
 
     def wait_for_redis(self):
         "Wait for redis being ready."
@@ -53,13 +57,18 @@ class RedisWorker:
     def run_loop_once(self, predict):
 
         _, serialized_data = self.db.blpop(self.QUEUE)
-        texts = []
-        ids = []
-        while serialized_data:
+        n_examples = 1
+        data = json.loads(serialized_data)
+        texts = [data["text"]]
+        ids = [data["id"]]
+        while n_examples < self.max_batch_size:
+            serialized_data = self.db.lpop(self.QUEUE)
+            if not serialized_data:
+                break
             data = json.loads(serialized_data)
             texts.append(data["text"])
             ids.append(data["id"])
-            serialized_data = self.db.lpop(self.QUEUE)
+            n_examples += 1
         labels = predict(texts)
         for label_id, label in zip(ids, labels):
             self.db.set(label_id, label)

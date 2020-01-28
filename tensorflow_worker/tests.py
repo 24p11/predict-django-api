@@ -2,7 +2,7 @@ import json
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from django.test import tag
+from django.test import tag, modify_settings
 
 try:
     from tensorflow_worker.workers import RedisWorker
@@ -13,17 +13,21 @@ import redis
 
 from django.conf import settings
 
-
 @tag("worker", "redis")
 class TestRedisWorker(TestCase):
     """Test Redis worker. 
 
     These tests need running redis server."""
 
+    QUEUE = "test-queue"
+
     @classmethod
     def setUpClass(cls):
 
         cls.db = redis.Redis(settings.REDIS_HOST)
+
+    def setUp(self):
+        self.db.flushdb()
 
     def tearDown(self):
         self.db.flushdb()
@@ -33,10 +37,10 @@ class TestRedisWorker(TestCase):
 
         doc_id = "xx"
         self.db.rpush(
-            settings.REDIS_SURGERY_QUEUE,
+            self.QUEUE,
             json.dumps({"id": doc_id, "text": "mytext"}).encode("ascii"),
         )
-        worker = RedisWorker()
+        worker = RedisWorker(queue=self.QUEUE)
 
         predict = Mock(return_value=["XXX111"])
         worker.run_loop_once(predict)
@@ -45,23 +49,24 @@ class TestRedisWorker(TestCase):
         data = self.db.get(doc_id)
 
         assert data == b"XXX111"
+        
+    def job(self, doc_id, text):
+        return self.db.rpush(
+            self.QUEUE,
+            json.dumps({"id": doc_id, "text": text}).encode("ascii"),
+        )
+
 
     def test_worker_with_batch(self):
         """Test worker with a batch of requests."""
 
-        doc_id = "xx"
-
-        def job(doc_id, text):
-            return self.db.rpush(
-                settings.REDIS_SURGERY_QUEUE,
-                json.dumps({"id": doc_id, "text": text}).encode("ascii"),
-            )
+        job = self.job
 
         job("1", "my text 1")
         job("3", "my text 3")
         job("2", "my text 2")
 
-        worker = RedisWorker()
+        worker = RedisWorker(max_batch_size=16, queue=self.QUEUE)
 
         predict = Mock(return_value=["CCC001", "CCC003", "CCC002"])
         worker.run_loop_once(predict)
@@ -71,3 +76,29 @@ class TestRedisWorker(TestCase):
         for i in range(1, 4):
             data = self.db.get(str(i))
             assert data == ("CCC00" + str(i)).encode("ascii")
+
+    def test_worker_batch_size(self):
+        "Test setting batch size."
+        job = self.job
+
+        job("1", "my text 1")
+        job("3", "my text 3")
+        job("2", "my text 2")
+
+        worker = RedisWorker(max_batch_size=1, queue=self.QUEUE)
+
+        predict = Mock(return_value=["CCC001"])
+        worker.run_loop_once(predict)
+        predict.assert_called_once_with(["my text 1"])
+        self.assertEqual(self.db.get("1"), b"CCC001")
+
+        predict.reset_mock()
+
+        worker.run_loop_once(predict)
+        predict.assert_called_once_with(["my text 3"])
+        self.assertEqual(self.db.get("3"), b"CCC001")
+        predict.reset_mock()
+
+        worker.run_loop_once(predict)
+        self.assertEqual(self.db.get("2"), b"CCC001")
+        predict.assert_called_once_with(["my text 2"])
