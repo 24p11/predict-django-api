@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     'common',
     'blog',
     'users',
-    'tensorflow-worker'
+    'tensorflow_worker'
 ]
 
 MIDDLEWARE = [
