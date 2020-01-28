@@ -49,15 +49,14 @@ class RedisWorker:
                 time.sleep(0.1)
 
     def run_loop_once(self, predict):
-        job_detail = self.db.blpop(self.QUEUE)
+        _, serialized_data = self.db.blpop(self.QUEUE)
         texts = []
         ids = []
-        while job_detail:
-            _, serialized_data = job_detail
+        while serialized_data:
             data = json.loads(serialized_data)
             texts.append(data['text'])
             ids.append(data['id'])
-            job_detail = self.db.lpop(self.QUEUE)
+            serialized_data = self.db.lpop(self.QUEUE)
         labels = predict(texts)
         for label_id, label in zip(ids, labels):
             self.db.set(label_id, label)
