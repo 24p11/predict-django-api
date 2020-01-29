@@ -12,6 +12,9 @@ services:
     volumes:
       - .:/code
     command: python manage.py surgery_classification_worker
+    environment:
+      - GITHUB_USER
+      - GITHUB_PASSWORD
     depends_on:
       - redis
   web:
