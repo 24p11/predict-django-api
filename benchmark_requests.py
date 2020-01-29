@@ -3,6 +3,7 @@ import timeit
 import time
 import aiohttp
 import asyncio
+from termcolor import colored
 
 
 N_INPUTS = 20
@@ -33,14 +34,14 @@ async def make_async_requests(n_request=20):
     return responses
 
 
-print("\x1b[0;31;40m Serial requests \x1b[0m")
+print(colored("Serial requests 🏭", "red"))
 N_REPEATS = 5
 start = time.time()
 make_requests(n_request=N_REPEATS)
 elapsed = time.time() - start
 print(int(elapsed / N_REPEATS / N_INPUTS * 1000), "milliseconds per input")
 
-print("\x1b[0;31;40m Concurrent requests \x1b[0m")
+print(colored("Concurrent requests 🚀", "red"))
 start = time.time()
 asyncio.run(make_async_requests(N_REPEATS))
 elapsed = time.time() - start
