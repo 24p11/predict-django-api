@@ -11,7 +11,7 @@ from rest_framework.decorators import api_view, schema
 from rest_framework.response import Response
 from rest_framework.schemas import AutoSchema
 
-from .serializers import PredictionSerializer, SurgeryReportSerializer
+from .serializers import PredictionSerializer, SurgeryReportSerializer, RequestSerializer
 
 db = redis.Redis(host=settings.REDIS_HOST)
 SURGERY_QUEUE = settings.REDIS_SURGERY_QUEUE
@@ -20,27 +20,34 @@ SURGERY_QUEUE = settings.REDIS_SURGERY_QUEUE
 @swagger_auto_schema(
     method="post",
     responses={200: PredictionSerializer, 400: "badly formatted request"},
-    request_body=SurgeryReportSerializer,
+    request_body=RequestSerializer,
 )
 @api_view(["POST"])
 def predict(request):
     """Predict CCAM codes from surgical report (CRO) text"""
 
-    input_data = SurgeryReportSerializer(data=request.data)
+    input_data = RequestSerializer(data=request.data)
     if input_data.is_valid():
-        request_id = str(uuid.uuid4())
-        prediction_request = {"id": request_id, **input_data.validated_data}
-        db.rpush(SURGERY_QUEUE, json.dumps(prediction_request))
+        request_ids = [] 
+        prediction_requests = []
+        inputs = input_data.validated_data['inputs']
+        for input_data in inputs:
+            request_id = str(uuid.uuid4())
+            request_ids.append(request_id)
+            prediction_requests.append(
+                json.dumps({"id": request_id, **input_data}))
+
+        db.rpush(SURGERY_QUEUE, *prediction_requests)
     else:
         return Response(input_data.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    v = db.get(request_id)
-
-    while not v:
+    predictions = db.mget(request_ids)
+    while None in predictions:
         time.sleep(0.01)
-        v = db.get(request_id)
+        predictions = db.mget(request_ids)
 
-    prediction = PredictionSerializer(data={"ccam_code": v.decode("ascii")})
+    results = [{"ccam_code": v.decode('ascii')} for v in predictions]
+    prediction = PredictionSerializer(data={"predictions": results})
 
     if prediction.is_valid():
         return Response(prediction.data)

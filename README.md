@@ -22,7 +22,7 @@ You can send request to the server using the cURL tool:
 API_TOKEN=c454acf6900c6d8d6ce08bd785f5e74657848232
 curl -X POST http://127.0.0.1:8000/predict/ \
     -H "Authorization: Token  ${API_TOKEN}" \
-    -d '{"text": "hello"}' \
+    -d '{"inputs": [{"text": "hello"}]}' \
     -H "Content-Type: application/json"
 ```
 

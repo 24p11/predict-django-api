@@ -1,5 +1,5 @@
 import json
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from unittest.mock import Mock, patch
 
 from django.test import tag, modify_settings
@@ -7,12 +7,13 @@ from django.test import tag, modify_settings
 try:
     from tensorflow_worker.workers import RedisWorker
 except ModuleNotFoundError:
-    pass
+    RedisWorker = None
 
 import redis
 
 from django.conf import settings
 
+@skipIf(RedisWorker is None, "redis not available")
 @tag("worker", "redis")
 class TestRedisWorker(TestCase):
     """Test Redis worker. 

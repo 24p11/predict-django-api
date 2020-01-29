@@ -16,7 +16,8 @@ services:
       - redis
   web:
     build: .
-    command: gunicorn -w 2 --threads 4 --worker-class=gthread --worker-tmp-dir /dev/shm predict_api.wsgi --bind :8000
+    #command: gunicorn -w 4 --threads 8 --worker-class=gthread --worker-tmp-dir /dev/shm predict_api.wsgi --bind :8000
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code
     ports:
