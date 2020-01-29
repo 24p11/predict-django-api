@@ -19,6 +19,7 @@ class BertClassifier:
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
 
     def predict(self, documents):
+        print("classifier received", len(documents), "inputs")
         tokens = [self.tokenizer.encode(text) for text in documents]
         tokens = tf.constant(tokens)
         (output,) = self.model(tokens)
