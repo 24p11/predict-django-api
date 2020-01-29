@@ -8,6 +8,15 @@ To run the development version of the prediction make sure to installl `docker` 
 > pip install docker-compose
 ```
 
+To build the images you need to provide the Github credentials (to download packages from some private repositories):
+
+```
+> GITHUB_USER=username GITHUB_PASSWORD=password_or_access_token docker-compose build
+```
+
+(if your user does not have rights to start docker, you may need to use the docker-compose command with sudo)
+
+
 Then start all the services using the `docker-compose up` command:
 
 ```
@@ -25,4 +34,3 @@ curl -X POST http://127.0.0.1:8000/predict/ \
     -d '{"inputs": [{"text": "hello"}]}' \
     -H "Content-Type: application/json"
 ```
-
