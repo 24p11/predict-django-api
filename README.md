@@ -8,14 +8,26 @@ To run the development version of the prediction make sure to installl `docker` 
 > pip install docker-compose
 ```
 
-To build the images you need to provide the Github credentials (to download packages from some private repositories):
+You need to initialise and checkout the submodules:
 
 ```
-> GITHUB_USER=username GITHUB_PASSWORD=password_or_access_token docker-compose build
+> git submodule update --init
+```
+
+Then build the images for the django server and workers use:
+
+```
+> docker-compose build
 ```
 
 (if your user does not have rights to start docker, you may need to use the docker-compose command with sudo)
 
+Configure the database and add the test users:
+
+```
+> docker-compose run web python manage.py migrate
+> docker-compose run web python manage.py loaddata predict_api/fixtures/data.json
+```
 
 Then start all the services using the `docker-compose up` command:
 
@@ -23,7 +35,7 @@ Then start all the services using the `docker-compose up` command:
 > docker-compose up
 ```
 
-This command will download all required Docker images (`redis`, `postgres`), build the image with django server and install all required packages. Then, it will start the server that will listen on the port 8000.
+This command will download all required Docker images (`redis`, `postgres`) and start them along with the django server and worker. The django server will listen on the port 8000.
 
 You can send request to the server using the cURL tool:
 

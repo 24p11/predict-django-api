@@ -91,6 +91,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'predict_api.wsgi.application'
 
+# Logging
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'predict': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'tensorflow_worker': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'transformers': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
