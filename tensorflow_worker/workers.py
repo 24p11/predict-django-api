@@ -54,7 +54,7 @@ class RedisWorker:
 
     def wait_for_redis(self):
         "Wait for redis being ready."
-        print("Waiting for redis to become ready.")
+        logger.info("Waiting for redis to become ready.")
         while True:
             try:
                 self.db.ping()
