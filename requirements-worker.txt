@@ -1,4 +1,3 @@
 redis==3.3.*
 transformers==2.3.*
 tensorflow==2.1.*
-git+https://${GITHUB_USER}:${GITHUB_PASSWORD}@github.com/24p11/automate_pmsi.git@ba4cc0aaaa90486bdf3abad252f7780ed5007bd0#egg=tf_codage

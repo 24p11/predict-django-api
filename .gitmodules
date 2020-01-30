@@ -1,0 +1,3 @@
+[submodule "libs/automate_pmsi"]
+	path = libs/automate_pmsi
+	url = https://github.com/24p11/automate_pmsi.git
