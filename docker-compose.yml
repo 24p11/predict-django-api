@@ -11,7 +11,7 @@ services:
        dockerfile: ./tensorflow_worker/Dockerfile
     volumes:
       - .:/code
-    command: python manage.py surgery_classification_worker
+    command: python manage.py surgery_classification_worker dummy_model
     environment:
       - GITHUB_USER
       - GITHUB_PASSWORD

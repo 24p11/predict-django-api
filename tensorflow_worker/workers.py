@@ -1,41 +1,40 @@
 from django.conf import settings
-from transformers import TFBertForSequenceClassification, BertTokenizer, BertConfig
+from transformers import CamembertTokenizer, CamembertConfig
+from tf_codage.models import CamembertForMultilabelClassification  
 import tensorflow as tf
 import numpy as np
 import redis
 import time
 import json
 import logging
+import joblib
+import os
 
 logger = logging.getLogger(__name__)
 
 
-class BertClassifier:
+class BertCCAMClassifier:
     """Run classification with transformers BERT model."""
 
-    def load_model(self):
+    def load_model(self, path_to_model='camembert-base'):
         "Load model."
 
-        model_name = "bert-base-multilingual-uncased"
+        config = CamembertConfig.from_pretrained(path_to_model)
 
-        config = BertConfig.from_pretrained(model_name)
-
-        self.model = TFBertForSequenceClassification(config)
-        self.tokenizer = BertTokenizer.from_pretrained(model_name)
+        self.model = CamembertForMultilabelClassification(config)
+        self.tokenizer = CamembertTokenizer.from_pretrained(path_to_model)
+        self.encoder = joblib.load(
+                os.path.join(path_to_model, 'encoder.joblib'))
 
     def predict(self, documents):
         logger.info("classifier received %d inputs", len(documents))
         tokens = [self.tokenizer.encode(text) for text in documents]
         tokens = tf.constant(tokens)
-        (output,) = self.model(tokens)
+        output = self.model(tokens)
+        indicators = output.numpy() > 0.5
+        labels = self.encoder.inverse_transform(indicators)
 
-        def dummy_decoder(output):
-            classes = np.array(["XXX123", "YYY999"])
-            i = output.numpy().argmax(1)
-            return classes[i]
-
-        label = dummy_decoder(output)
-        return label
+        return labels
 
 
 class RedisWorker:
