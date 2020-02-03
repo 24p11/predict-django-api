@@ -78,10 +78,10 @@ class RedisWorker:
             ids.append(data["id"])
             n_examples += 1
         logger.info("sending %d new jobs to classfier", n_examples)
-        labels = predict(texts)
+        outputs = predict(texts)
         logger.info("sending results")
-        for label_id, label in zip(ids, labels):
-            self.db.set(label_id, label)
+        for label_id, labels in zip(ids, outputs):
+            self.db.set(label_id, json.dumps({"labels": list(labels)}))
 
     def run_loop(self, predict):
 

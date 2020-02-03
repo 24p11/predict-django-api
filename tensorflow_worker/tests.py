@@ -43,13 +43,13 @@ class TestRedisWorker(TestCase):
         )
         worker = RedisWorker(queue=self.QUEUE)
 
-        predict = Mock(return_value=["XXX111"])
+        predict = Mock(return_value=[{"XXX111"}])
         worker.run_loop_once(predict)
         predict.assert_called_once_with(["mytext"])
 
         data = self.db.get(doc_id)
 
-        assert data == b"XXX111"
+        assert data == b'{"labels": ["XXX111"]}'
         
     def job(self, doc_id, text):
         return self.db.rpush(
@@ -69,14 +69,14 @@ class TestRedisWorker(TestCase):
 
         worker = RedisWorker(max_batch_size=16, queue=self.QUEUE)
 
-        predict = Mock(return_value=["CCC001", "CCC003", "CCC002"])
+        predict = Mock(return_value=[{"CCC001"}, {"CCC003"}, {"CCC002"}])
         worker.run_loop_once(predict)
 
         predict.assert_called_once_with(["my text 1", "my text 3", "my text 2"])
 
         for i in range(1, 4):
             data = self.db.get(str(i))
-            assert data == ("CCC00" + str(i)).encode("ascii")
+            assert json.loads(data) == {"labels": [f"CCC00{i}"]}
 
     def test_worker_batch_size(self):
         "Test setting batch size."
@@ -88,18 +88,18 @@ class TestRedisWorker(TestCase):
 
         worker = RedisWorker(max_batch_size=1, queue=self.QUEUE)
 
-        predict = Mock(return_value=["CCC001"])
+        predict = Mock(return_value=[{"CCC001"}])
         worker.run_loop_once(predict)
         predict.assert_called_once_with(["my text 1"])
-        self.assertEqual(self.db.get("1"), b"CCC001")
+        self.assertEqual(json.loads(self.db.get("1")), {"labels": ["CCC001"]})
 
         predict.reset_mock()
 
         worker.run_loop_once(predict)
         predict.assert_called_once_with(["my text 3"])
-        self.assertEqual(self.db.get("3"), b"CCC001")
+        self.assertEqual(json.loads(self.db.get("3")), {"labels": ["CCC001"]})
         predict.reset_mock()
 
         worker.run_loop_once(predict)
-        self.assertEqual(self.db.get("2"), b"CCC001")
+        self.assertEqual(json.loads(self.db.get("2")), {"labels": ["CCC001"]})
         predict.assert_called_once_with(["my text 2"])
