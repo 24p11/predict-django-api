@@ -23,17 +23,26 @@ class TestPredictAPI(TestCase):
     @mock.patch("redis.Redis.rpush")
     @mock.patch("redis.Redis.mget")
     def test_predict_post(self, mget, rpush):
-        mget.return_value = b"XXXTEST",
+        mget.return_value = [b'{"labels":["XXXTEST"]}']
 
         response = self.client.post("/predict/",
                 data=json.dumps({'inputs': [{"text": "Test"}]}),
             content_type='application/json',
             HTTP_AUTHORIZATION="Token {}".format(self.token))
 
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"predictions": [{"ccam_codes": ["XXXTEST"]}]})
+
     @mock.patch("redis.Redis.rpush")
     @mock.patch("redis.Redis.mget")
     def test_predict_post_many_inputs(self, mget, rpush):
-        mget.return_value = b"XXXTEST", b"YYYTEST", b"ZZZTEST"
+        mget.return_value = [
+            b'{"labels": ["XXXTEST"]}',
+            b'{"labels": ["YYYTEST"]}',
+            b'{"labels": ["ZZZTEST"]}',
+        ]
 
         response = self.client.post("/predict/",
                 data=json.dumps({'inputs': [
@@ -46,7 +55,7 @@ class TestPredictAPI(TestCase):
 
         self.assertEqual(response.json(),
             {"predictions": [
-                {"ccam_code": "XXXTEST"},
-                {"ccam_code": "YYYTEST"},
-                {"ccam_code": "ZZZTEST"},
+                {"ccam_codes": ["XXXTEST"]},
+                {"ccam_codes": ["YYYTEST"]},
+                {"ccam_codes": ["ZZZTEST"]},
                 ]})
