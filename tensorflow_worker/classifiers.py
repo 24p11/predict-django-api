@@ -25,8 +25,14 @@ class BertCCAMClassifier:
         Return list of tuples (multiple labels per document)"""
 
         logger.info("classifier received %d inputs", len(documents))
-        tokens = [self.tokenizer.encode(text) for text in documents]
-        tokens = tf.constant(tokens)
+        tokens = self.tokenizer.batch_encode_plus(
+            documents,
+            max_length=512,
+            pad_to_max_length=True,
+            add_special_tokens=True,
+            return_tensors="tf",
+            return_attention_masks=True,
+        )
         output = self.model(tokens)
         indicators = output.numpy() > 0.5
         labels = self.encoder.inverse_transform(indicators)
