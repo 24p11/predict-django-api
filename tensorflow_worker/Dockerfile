@@ -6,5 +6,6 @@ COPY requirements-worker.txt /code/
 COPY requirements.txt /code/
 RUN pip install -r requirements-worker.txt
 RUN pip install -r requirements.txt
-COPY . /code/
+COPY libs /code
 RUN pip install libs/automate_pmsi
+COPY . /code/

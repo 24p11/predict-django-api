@@ -19,9 +19,7 @@ class BertCCAMClassifier:
     def load_model(self, path_to_model='camembert-base'):
         "Load model."
 
-        config = CamembertConfig.from_pretrained(path_to_model)
-
-        self.model = CamembertForMultilabelClassification(config)
+        self.model = CamembertForMultilabelClassification.from_pretrained(path_to_model)
         self.tokenizer = CamembertTokenizer.from_pretrained(path_to_model)
         self.encoder = joblib.load(
                 os.path.join(path_to_model, 'encoder.joblib'))
