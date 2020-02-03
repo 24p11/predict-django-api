@@ -1,39 +1,11 @@
 from django.conf import settings
-from transformers import CamembertTokenizer, CamembertConfig
-from tf_codage.models import CamembertForMultilabelClassification  
-import tensorflow as tf
-import numpy as np
 import redis
 import time
 import json
 import logging
-import joblib
 import os
 
 logger = logging.getLogger(__name__)
-
-
-class BertCCAMClassifier:
-    """Run classification with transformers BERT model."""
-
-    def load_model(self, path_to_model='camembert-base'):
-        "Load model."
-
-        self.model = CamembertForMultilabelClassification.from_pretrained(path_to_model)
-        self.tokenizer = CamembertTokenizer.from_pretrained(path_to_model)
-        self.encoder = joblib.load(
-                os.path.join(path_to_model, 'encoder.joblib'))
-
-    def predict(self, documents):
-        logger.info("classifier received %d inputs", len(documents))
-        tokens = [self.tokenizer.encode(text) for text in documents]
-        tokens = tf.constant(tokens)
-        output = self.model(tokens)
-        indicators = output.numpy() > 0.5
-        labels = self.encoder.inverse_transform(indicators)
-
-        return labels
-
 
 class RedisWorker:
     """Worker based on Redis queue."""

@@ -1,5 +1,5 @@
 from unittest import TestCase
-from tensorflow_worker.workers import BertCCAMClassifier
+from tensorflow_worker.classifiers import BertCCAMClassifier
 
 class DummyClassifierTest(TestCase):
 

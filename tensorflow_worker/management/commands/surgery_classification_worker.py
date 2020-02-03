@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
-from tensorflow_worker.workers import RedisWorker, BertCCAMClassifier
+from tensorflow_worker.workers import RedisWorker
+from tensorflow_worker.classifiers BertCCAMClassifier
 import logging
 
 logger = logging.getLogger(__name__)
