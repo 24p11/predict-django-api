@@ -1,8 +1,8 @@
 import json
 from unittest import TestCase, skipIf
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
-from django.test import tag, modify_settings
+from django.test import tag
 
 try:
     from tensorflow_worker.workers import RedisWorker
@@ -13,10 +13,11 @@ import redis
 
 from django.conf import settings
 
+
 @skipIf(RedisWorker is None, "redis not available")
 @tag("worker", "redis")
 class TestRedisWorker(TestCase):
-    """Test Redis worker. 
+    """Test Redis worker.
 
     These tests need running redis server."""
 
@@ -38,8 +39,7 @@ class TestRedisWorker(TestCase):
 
         doc_id = "xx"
         self.db.rpush(
-            self.QUEUE,
-            json.dumps({"id": doc_id, "text": "mytext"}).encode("ascii"),
+            self.QUEUE, json.dumps({"id": doc_id, "text": "mytext"}).encode("ascii"),
         )
         worker = RedisWorker(queue=self.QUEUE)
 
@@ -50,13 +50,11 @@ class TestRedisWorker(TestCase):
         data = self.db.get(doc_id)
 
         assert data == b'{"labels": ["XXX111"]}'
-        
+
     def job(self, doc_id, text):
         return self.db.rpush(
-            self.QUEUE,
-            json.dumps({"id": doc_id, "text": text}).encode("ascii"),
+            self.QUEUE, json.dumps({"id": doc_id, "text": text}).encode("ascii"),
         )
-
 
     def test_worker_with_batch(self):
         """Test worker with a batch of requests."""
@@ -103,3 +101,32 @@ class TestRedisWorker(TestCase):
         worker.run_loop_once(predict)
         self.assertEqual(json.loads(self.db.get("2")), {"labels": ["CCC001"]})
         predict.assert_called_once_with(["my text 2"])
+
+    def test_worker_badly_formatted_data(self):
+        "Test robustness to badly formatted data."
+        self.db.rpush(self.QUEUE, b"Hello")
+        self.job("2", "hi there")
+        self.db.rpush(self.QUEUE, b'{"id": "1", "bad_key":"Hello again"}')
+        self.job("3", "hello?")
+        self.db.rpush(self.QUEUE, b"")
+
+        predict = Mock(return_value=[["A"], ["B"]])
+        worker = RedisWorker(queue=self.QUEUE)
+        with self.assertLogs("tensorflow_worker.workers", level="ERROR") as cm:
+            worker.run_loop_once(predict)
+            self.assertRegex(cm.output[0], "badly formatted.*(Hello)")
+
+        self.assertIsNone(self.db.get("2"))
+        self.assertIsNone(self.db.get("3"))
+        predict.assert_not_called()
+
+        with self.assertLogs("tensorflow_worker.workers", level="ERROR") as cm:
+            worker.run_loop_once(predict)
+            self.assertRegex(cm.output[0], "Missing key.*(text)")
+            self.assertRegex(cm.output[1], "badly formatted")
+
+        result = self.db.get("2")
+        self.assertEqual(json.loads(result), {"labels": ["A"]})
+        result = self.db.get("3")
+        self.assertEqual(json.loads(result), {"labels": ["B"]})
+        predict.assert_called_once_with(["hi there", "hello?"])

@@ -7,6 +7,9 @@ import os
 
 logger = logging.getLogger(__name__)
 
+class MessageError(Exception):
+    pass
+
 class RedisWorker:
     """Worker based on Redis queue."""
 
@@ -34,9 +37,19 @@ class RedisWorker:
     def deserialize(self, serialized_data):
         "Deserialize input data from JSON"
 
-        data = json.loads(serialized_data)
-        text = data["text"]
-        request_id = data["id"]
+        try:
+            data = json.loads(serialized_data)
+        except json.JSONDecodeError:
+            logger.error("Obtained badly formatted data from redis queue: %s", serialized_data)
+            raise MessageError
+
+        try:
+            text = data["text"]
+            request_id = data["id"]
+        except KeyError as exc:
+            logger.error("Missing key '%s' in the message: %s", exc, serialized_data)
+            raise MessageError
+
         return request_id, text
 
 
@@ -45,19 +58,26 @@ class RedisWorker:
         logger.info("waiting for new jobs")
         _, serialized_data = self.db.blpop(self.QUEUE)
 
-        request_id, text = self.deserialize(serialized_data)
+        try:
+            request_id, text = self.deserialize(serialized_data)
+        except MessageError:
+            return
+
         texts = [text]
         ids = [request_id]
 
         n_examples = 1
         while n_examples < self.max_batch_size:
             serialized_data = self.db.lpop(self.QUEUE)
-            if not serialized_data:
+            if serialized_data is None:
                 break
-            request_id, text = self.deserialize(serialized_data)
-            texts.append(text)
-            ids.append(request_id)
-            n_examples += 1
+            try:
+                request_id, text = self.deserialize(serialized_data)
+                texts.append(text)
+                ids.append(request_id)
+                n_examples += 1
+            except MessageError:
+                continue
 
         logger.info("sending %d new jobs to classfier", n_examples)
         outputs = predict(texts)
