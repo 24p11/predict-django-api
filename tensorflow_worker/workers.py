@@ -30,23 +30,35 @@ class RedisWorker:
                 break
             except redis.RedisError:
                 time.sleep(0.1)
+    
+    def deserialize(self, serialized_data):
+        "Deserialize input data from JSON"
+
+        data = json.loads(serialized_data)
+        text = data["text"]
+        request_id = data["id"]
+        return request_id, text
+
 
     def run_loop_once(self, predict):
 
         logger.info("waiting for new jobs")
         _, serialized_data = self.db.blpop(self.QUEUE)
+
+        request_id, text = self.deserialize(serialized_data)
+        texts = [text]
+        ids = [request_id]
+
         n_examples = 1
-        data = json.loads(serialized_data)
-        texts = [data["text"]]
-        ids = [data["id"]]
         while n_examples < self.max_batch_size:
             serialized_data = self.db.lpop(self.QUEUE)
             if not serialized_data:
                 break
-            data = json.loads(serialized_data)
-            texts.append(data["text"])
-            ids.append(data["id"])
+            request_id, text = self.deserialize(serialized_data)
+            texts.append(text)
+            ids.append(request_id)
             n_examples += 1
+
         logger.info("sending %d new jobs to classfier", n_examples)
         outputs = predict(texts)
         logger.info("sending results")
