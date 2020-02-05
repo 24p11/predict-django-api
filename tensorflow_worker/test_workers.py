@@ -146,7 +146,9 @@ class TestRedisWorker(TestCase):
             return [("B",) for i in range(len(values))]
 
         worker = RedisWorker(queue=self.QUEUE)
-        worker.run_loop_once(predict)
+        with self.assertLogs("tensorflow_worker.workers", level="ERROR") as cm:
+            worker.run_loop_once(predict)
+            self.assertRegex(cm.output[0] , "classifier exception")
 
         for k in ["1", "2"]:
             result = self.db.get(k)
