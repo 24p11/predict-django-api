@@ -18,3 +18,9 @@ class DummyClassifierTest(TestCase):
         # in a batch
         prediction = classifier.predict(["bartosz", "adam"])
         self.assertEqual(prediction, [{"labels": ("B",)}, {"labels": ("A",)}])
+
+    def test_validate_input_data(self):
+
+        classifier = BertCCAMClassifier()
+        classifier.load_model("dummy_model")
+        prediction = classifier.predict([5, 'barosz'])

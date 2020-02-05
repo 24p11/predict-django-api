@@ -8,7 +8,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class BertCCAMClassifier:
     """Run classification with transformers BERT model."""
 
