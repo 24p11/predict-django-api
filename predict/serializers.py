@@ -12,6 +12,7 @@ class RequestSerializer(serializers.Serializer):
 
 class CCAMSerializer(serializers.Serializer):
     ccam_codes = serializers.ListField(child=serializers.CharField(max_length=12))
+    error_message = serializers.CharField(max_length=512, required=False)
 
 
 class PredictionSerializer(serializers.Serializer):

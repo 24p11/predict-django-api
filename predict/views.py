@@ -54,7 +54,12 @@ def predict(request):
         time.sleep(0.01)
         predictions = db.mget(request_ids)
 
-    results = [{"ccam_codes": json.loads(v)["labels"]} for v in predictions]
+    def format_response(serialized_data):
+        d = json.loads(serialized_data)
+        ccam_codes = d.pop('labels')
+        return {"ccam_codes": ccam_codes, **d}
+
+    results = [format_response(v) for v in predictions]
     prediction = PredictionSerializer(data={"predictions": results})
 
     if prediction.is_valid():

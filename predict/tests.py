@@ -70,3 +70,29 @@ class TestPredictAPI(TestCase):
                 ]
             },
         )
+
+    @mock.patch("redis.Redis.rpush")
+    @mock.patch("redis.Redis.mget")
+    def test_forward_classifier_errors_to_user(self, mget, rpush):
+        "test if errors returned by classifer are returned to user."
+
+        mget.return_value = [
+            b'{"labels": ["ERROR"], "error_message": "error occurred"}'
+        ]
+
+        response = self.client.post(
+            "/predict/",
+            data=json.dumps({"inputs": [{"text": "Test 1"}]}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
+
+        self.assertEqual(
+            response.json(),
+            {
+                "predictions": [
+                    {"ccam_codes": ["ERROR"], "error_message": "error occurred"}
+                ]
+            },
+        )
+
