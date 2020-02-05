@@ -43,7 +43,7 @@ class TestRedisWorker(TestCase):
         )
         worker = RedisWorker(queue=self.QUEUE)
 
-        predict = Mock(return_value=[{"XXX111"}])
+        predict = Mock(return_value=[{"labels": ["XXX111"]}])
         worker.run_loop_once(predict)
         predict.assert_called_once_with(["mytext"])
 
@@ -67,14 +67,17 @@ class TestRedisWorker(TestCase):
 
         worker = RedisWorker(max_batch_size=16, queue=self.QUEUE)
 
-        predict = Mock(return_value=[{"CCC001"}, {"CCC003"}, {"CCC002"}])
+        return_values = [
+            {"labels": [f"CCC00{i}"]} for i in [1, 3, 2]
+        ]
+        predict = Mock(return_value=return_values)
         worker.run_loop_once(predict)
 
         predict.assert_called_once_with(["my text 1", "my text 3", "my text 2"])
 
         for i in range(1, 4):
             data = self.db.get(str(i))
-            assert json.loads(data) == {"labels": [f"CCC00{i}"]}
+            self.assertEqual(json.loads(data), {"labels": [f"CCC00{i}"]})
 
     def test_worker_batch_size(self):
         "Test setting batch size."
@@ -86,7 +89,7 @@ class TestRedisWorker(TestCase):
 
         worker = RedisWorker(max_batch_size=1, queue=self.QUEUE)
 
-        predict = Mock(return_value=[{"CCC001"}])
+        predict = Mock(return_value=[{"labels": ["CCC001"]}])
         worker.run_loop_once(predict)
         predict.assert_called_once_with(["my text 1"])
         self.assertEqual(json.loads(self.db.get("1")), {"labels": ["CCC001"]})
@@ -110,7 +113,7 @@ class TestRedisWorker(TestCase):
         self.job("3", "hello?")
         self.db.rpush(self.QUEUE, b"")
 
-        predict = Mock(return_value=[["A"], ["B"]])
+        predict = Mock(return_value=[{"labels": ["A"]}, {"labels": ["B"]}])
         worker = RedisWorker(queue=self.QUEUE)
         with self.assertLogs("tensorflow_worker.workers", level="ERROR") as cm:
             worker.run_loop_once(predict)
@@ -130,3 +133,44 @@ class TestRedisWorker(TestCase):
         result = self.db.get("3")
         self.assertEqual(json.loads(result), {"labels": ["B"]})
         predict.assert_called_once_with(["hi there", "hello?"])
+
+    def test_classifier_raises(self):
+        """Test if worker continues working if a classifier raises an exception."""
+
+        self.job("1", "one")
+        self.job("2", "two")
+
+        def predict(values):
+            if "two" in values:
+                raise Exception("classifier exception")
+            return [("B",) for i in range(len(values))]
+
+        worker = RedisWorker(queue=self.QUEUE)
+        worker.run_loop_once(predict)
+
+        for k in ["1", "2"]:
+            result = self.db.get(k)
+            self.assertEqual(json.loads(result), 
+                {"labels": ["ERROR"],
+                 "error_message": "classifier raised an unexpected exception"})
+
+    def test_classifier_returns_error_message(self):
+        """Test if worker passes error message from classifier to the request handler."""
+
+        self.job("1", "one")
+
+        predict = Mock(
+            return_value=[
+                {"labels": ["ERROR"], "error_message": "can not parse string"}
+            ]
+        )
+
+        worker = RedisWorker(queue=self.QUEUE)
+        worker.run_loop_once(predict)
+
+        result = self.db.get("1")
+        self.assertEqual(
+            json.loads(result),
+            {"labels": ["ERROR"], "error_message": "can not parse string"},
+        )
+

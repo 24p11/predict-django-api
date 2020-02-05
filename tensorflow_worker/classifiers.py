@@ -37,4 +37,4 @@ class BertCCAMClassifier:
         indicators = output.numpy() > 0.5
         labels = self.encoder.inverse_transform(indicators)
 
-        return labels
+        return [{"labels": l} for l in labels]

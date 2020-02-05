@@ -7,8 +7,10 @@ import os
 
 logger = logging.getLogger(__name__)
 
+
 class MessageError(Exception):
     pass
+
 
 class RedisWorker:
     """Worker based on Redis queue."""
@@ -33,14 +35,16 @@ class RedisWorker:
                 break
             except redis.RedisError:
                 time.sleep(0.1)
-    
+
     def deserialize(self, serialized_data):
         "Deserialize input data from JSON"
 
         try:
             data = json.loads(serialized_data)
         except json.JSONDecodeError:
-            logger.error("Obtained badly formatted data from redis queue: %s", serialized_data)
+            logger.error(
+                "Obtained badly formatted data from redis queue: %s", serialized_data
+            )
             raise MessageError
 
         try:
@@ -51,7 +55,6 @@ class RedisWorker:
             raise MessageError
 
         return request_id, text
-
 
     def run_loop_once(self, predict):
 
@@ -80,10 +83,22 @@ class RedisWorker:
                 continue
 
         logger.info("sending %d new jobs to classfier", n_examples)
-        outputs = predict(texts)
+        try:
+            outputs = predict(texts)
+        except Exception as exc:
+            logger.error(
+                "classifier failed for inputs %s with message %s", texts, str(exc)
+            )
+            outputs = [
+                {
+                    "labels": ("ERROR",),
+                    "error_message": "classifier raised an unexpected exception",
+                }
+                for _ in texts
+            ]
         logger.info("sending results")
         for label_id, labels in zip(ids, outputs):
-            self.db.set(label_id, json.dumps({"labels": list(labels)}))
+            self.db.set(label_id, json.dumps(labels))
 
     def run_loop(self, predict):
 
