@@ -7,7 +7,21 @@ import tensorflow as tf
 import tempfile
 from sklearn.preprocessing import MultiLabelBinarizer
 import joblib
+import argparse
+from pathlib import Path
+import csv
 
+parser = argparse.ArgumentParser()
+parser.add_argument("data_path")
+parser.add_argument("--model-dir", default="dummy_model")
+parser.add_argument("--seed", default=98819, type=int)
+args = parser.parse_args()
+model_dir = Path(args.model_dir)
+
+tf.random.set_seed(args.seed)
+
+
+os.makedirs(model_dir, exist_ok=True)
 
 with tempfile.NamedTemporaryFile() as fid:
     fid.write(b"hello my name is adam. he is bartosz. hello ada")
@@ -16,13 +30,15 @@ with tempfile.NamedTemporaryFile() as fid:
     model = spm.SentencePieceTrainer.Train(
         "--input="
         + fid.name
-        + " --model_prefix=dummy_model/m --vocab_size=20"
+        + " --model_prefix="
+        + str(model_dir / "m")
+        + " --vocab_size=20"
     )
 
-tokenizer = CamembertTokenizer("dummy_model/m.model")
-tokenizer.save_pretrained("dummy_model")
-os.unlink('dummy_model/m.model')
-os.unlink('dummy_model/m.vocab')
+tokenizer = CamembertTokenizer(model_dir / "m.model")
+tokenizer.save_pretrained(model_dir)
+os.unlink(model_dir / "m.model")
+os.unlink(model_dir / "m.vocab")
 
 config = CamembertConfig(
     tokenizer.vocab_size,
@@ -35,14 +51,21 @@ config = CamembertConfig(
 )
 model = CamembertForMultilabelClassification(config)
 
-os.makedirs("dummy_model", exist_ok=True)
 model(tf.constant([[10, 10, 0]]))
 
-texts = ["bartosz", "adam", "ala", "bert", "ala bert", "bert ala"]
-labels = [["B"], ["A"], ["A"], ["B"], ["A", "B"], ["B", "A"]]
+texts = []
+labels = []
+with open(args.data_path) as csvfile:
+    reader = csv.reader(csvfile, delimiter=",", quotechar='"')
+    for row in reader:
+        texts.append(row[0])
+        labels.append(row[1].split(","))
+print(texts)
+print(labels)
+
 encoder = MultiLabelBinarizer()
 labels = encoder.fit_transform(labels)
-joblib.dump(encoder, "dummy_model/encoder.joblib")
+joblib.dump(encoder, model_dir / "encoder.joblib")
 
 sgd = tf.keras.optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
 model.compile(loss="binary_crossentropy", optimizer=sgd)
@@ -52,14 +75,14 @@ tokenized_texts = [
 ]
 
 model.fit(tf.constant(tokenized_texts), tf.constant(labels), epochs=600)
-model.save_pretrained("dummy_model")
+model.save_pretrained(model_dir)
 print(model.config)
 print(model.summary())
 
 from tf_codage.models import CamembertForMultilabelClassification
 
-cam = CamembertForMultilabelClassification.from_pretrained("dummy_model")
-tok = CamembertTokenizer.from_pretrained("dummy_model")
+cam = CamembertForMultilabelClassification.from_pretrained(model_dir)
+tok = CamembertTokenizer.from_pretrained(model_dir)
 
 tokens = tok.encode("bartosz")
 print(cam(tf.constant([tokens])))

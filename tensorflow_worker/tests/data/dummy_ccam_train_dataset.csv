@@ -1,0 +1,6 @@
+bartosz,"B"
+adam,"A"
+ala,"A"
+bert,"B"
+ala bert,"A,B"
+bert ala,"B,A"
