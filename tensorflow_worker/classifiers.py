@@ -1,4 +1,5 @@
 import os
+import json
 import joblib
 from transformers import CamembertTokenizer, CamembertConfig
 from tf_codage.models import CamembertForMultilabelClassification
@@ -13,8 +14,12 @@ logger = logging.getLogger(__name__)
 class BertCCAMClassifier:
     """Run classification with transformers BERT model."""
 
-    def load_model(self, path_to_model):
+    def load_model(self, models_dir):
         "Load model."
+
+        with open(os.path.join(models_dir, 'model_mapping.json')) as fid:
+            models_conf = json.load(fid)
+        path_to_model = os.path.join(models_dir, models_conf['ccam_models'][0]['path'])
 
         self.model = CamembertForMultilabelClassification.from_pretrained(path_to_model)
         self.tokenizer = CamembertTokenizer.from_pretrained(path_to_model)
@@ -32,7 +37,7 @@ class BertCCAMClassifier:
         for i, doc in enumerate(documents):
             if not isinstance(doc, str):
                 results[i]["labels"] = ("ERROR",)
-                results[i]["error"] = "wrong document format"
+                results[i]["error_message"] = "wrong document format"
             else:
                 valid_documents.append(doc)
                 valid_ids.append(i)

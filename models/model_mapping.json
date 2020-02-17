@@ -1,0 +1,5 @@
+{"service_model" : {"path": "dummy_cmd_model"},
+ "ccam_models" : [
+     {"service_id": "1",
+      "path": "dummy_ccam_model"}
+ ]}

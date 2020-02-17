@@ -1,5 +1,6 @@
 from unittest import TestCase
 from tensorflow_worker.classifiers import BertCCAMClassifier
+import os
 
 
 class DummyClassifierTest(TestCase):
@@ -7,7 +8,7 @@ class DummyClassifierTest(TestCase):
         """Test prediction by dummy BERT classifier."""
 
         classifier = BertCCAMClassifier()
-        classifier.load_model("dummy_model")
+        classifier.load_model("models")
         prediction = classifier.predict(["bartosz"])
         self.assertEqual(prediction, [{"labels": ("B",)}])
 
@@ -22,13 +23,13 @@ class DummyClassifierTest(TestCase):
     def test_validate_input_data(self):
 
         classifier = BertCCAMClassifier()
-        classifier.load_model("dummy_model")
+        classifier.load_model("models")
         prediction = classifier.predict([5, "barosz"])
 
         self.assertEqual(
             prediction,
             [
-                {"labels": ("ERROR",), "error": "wrong document format"},
+                {"labels": ("ERROR",), "error_message": "wrong document format"},
                 {"labels": ("B",)},
             ],
         )
