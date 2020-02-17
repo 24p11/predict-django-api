@@ -23,4 +23,12 @@ class DummyClassifierTest(TestCase):
 
         classifier = BertCCAMClassifier()
         classifier.load_model("dummy_model")
-        prediction = classifier.predict([5, 'barosz'])
+        prediction = classifier.predict([5, "barosz"])
+
+        self.assertEqual(
+            prediction,
+            [
+                {"labels": ("ERROR",), "error": "wrong document format"},
+                {"labels": ("B",)},
+            ],
+        )
