@@ -5,7 +5,7 @@ import sentencepiece as spm
 import os
 import tensorflow as tf
 import tempfile
-from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.preprocessing import MultiLabelBinarizer, LabelBinarizer
 import joblib
 import argparse
 from pathlib import Path
@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("data_path")
 parser.add_argument("--model-dir", default="dummy_model")
 parser.add_argument("--seed", default=98819, type=int)
+parser.add_argument("--multi-label", action="store_true")
 args = parser.parse_args()
 model_dir = Path(args.model_dir)
 
@@ -40,19 +41,6 @@ tokenizer.save_pretrained(model_dir)
 os.unlink(model_dir / "m.model")
 os.unlink(model_dir / "m.vocab")
 
-config = CamembertConfig(
-    tokenizer.vocab_size,
-    num_labels=2,
-    hidden_size=192,
-    max_position_embeddings=22,
-    intermediate_size=1,
-    num_attention_heads=1,
-    num_hidden_layers=1,
-)
-model = CamembertForMultilabelClassification(config)
-
-model(tf.constant([[10, 10, 0]]))
-
 texts = []
 labels = []
 with open(args.data_path) as csvfile:
@@ -63,7 +51,34 @@ with open(args.data_path) as csvfile:
 print(texts)
 print(labels)
 
-encoder = MultiLabelBinarizer()
+num_labels = len(set(sum(labels, [])))
+
+config = CamembertConfig(
+    tokenizer.vocab_size,
+    num_labels=num_labels,
+    hidden_size=192,
+    max_position_embeddings=22,
+    intermediate_size=1,
+    num_attention_heads=1,
+    num_hidden_layers=1,
+)
+model = CamembertForMultilabelClassification(config)
+
+model(tf.constant([[10, 10, 0]]))
+
+
+multilabel = any(len(l) > 1 for l in labels)
+if multilabel and not args.multi_label:
+    raise Exception(
+        "detected multiple labels per row and option --multi-label was not selected"
+    )
+
+if not multilabel:
+    labels = [l[0] for l in labels]
+    encoder = LabelBinarizer()
+else:
+    encoder = MultiLabelBinarizer()
+
 labels = encoder.fit_transform(labels)
 joblib.dump(encoder, model_dir / "encoder.joblib")
 
@@ -83,6 +98,12 @@ from tf_codage.models import CamembertForMultilabelClassification
 
 cam = CamembertForMultilabelClassification.from_pretrained(model_dir)
 tok = CamembertTokenizer.from_pretrained(model_dir)
+enc = joblib.load(model_dir / 'encoder.joblib')
 
 tokens = tok.encode("bartosz")
-print(cam(tf.constant([tokens])))
+output = cam(tf.constant([tokens])).numpy()
+print(output)
+if multilabel:
+    output = output > 0.5
+predicted = encoder.inverse_transform(output)
+print(predicted)
