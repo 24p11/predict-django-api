@@ -1,14 +1,12 @@
 import os
 import json
 import joblib
-from transformers import CamembertTokenizer, CamembertConfig
+from transformers import CamembertTokenizer
 
 from tf_codage.models import CamembertForMultilabelClassification
 from tf_codage.models import TFCamembertForSequenceClassification
 import tensorflow as tf
-import numpy as np
 import logging
-from collections import defaultdict
 from itertools import groupby
 
 logger = logging.getLogger(__name__)
