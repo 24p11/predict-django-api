@@ -1,6 +1,5 @@
 from unittest import TestCase
 from tensorflow_worker.classifiers import BertCCAMClassifier
-import os
 
 
 class DummyClassifierTest(TestCase):
@@ -47,3 +46,11 @@ class DummyClassifierTest(TestCase):
                 {"labels": ("B",)},
             ],
         )
+
+    def test_large_batch(self):
+        """Test if classifier can handle large data batches."""
+
+        classifier = BertCCAMClassifier()
+        classifier.load_model("models")
+        prediction = classifier.predict(["bert", "bartosz"] * 101)
+        self.assertEqual(prediction, [{"labels": ("C",)}, {"labels": ("B",)}] * 101)

@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 class BertCCAMClassifier:
     """Run classification with transformers BERT model."""
 
+    BATCH_SIZE = 16
+
     def load_model(self, models_dir):
         "Load model."
 
@@ -40,38 +42,60 @@ class BertCCAMClassifier:
         self.service_model = TFCamembertForSequenceClassification.from_pretrained(
             service_model_path
         )
+
+        self.MAX_LENGTH = self.service_model.config.max_position_embeddings - 2
+
         self.service_encoder = joblib.load(encoder_path)
         self.tokenizer = CamembertTokenizer.from_pretrained(tokenizer_path)
 
     def _tokenize(self, valid_documents):
 
-        tokens = self.tokenizer.batch_encode_plus(
-            valid_documents,
-            max_length=512,
-            pad_to_max_length=True,
-            add_special_tokens=True,
-            return_tensors="tf",
-            return_attention_masks=True,
-        )
+        tokens = [
+            self.tokenizer.encode_plus(
+                doc,
+                max_length=self.MAX_LENGTH,
+                pad_to_max_length=True,
+                add_special_tokens=True
+            )
+            for doc in valid_documents
+        ]
 
         return tokens
+
+    def _make_dataset(self, tokens):
+        """Create a TF Dataset from a list of tokenized docs"""
+
+        merged_data = {}
+
+        for key in ['input_ids', 'attention_mask', 'token_type_ids']:
+            values = tf.constant([tok[key] for tok in tokens])
+            merged_data[key] = values
+
+        dataset = tf.data.Dataset.from_tensor_slices(merged_data)
+        dataset = dataset.batch(self.BATCH_SIZE)
+
+        return dataset
 
     def _predict_service(self, tokens):
         "Predict service id from tokenized text"
 
-        (output,) = self.service_model(tokens)
-        service_codes = self.service_encoder.inverse_transform(output.numpy())
+        dataset = self._make_dataset(tokens)
+
+        output = self.service_model.predict(dataset)
+        service_codes = self.service_encoder.inverse_transform(output)
 
         return service_codes
 
     def _predict_ccam(self, tokens, service_id):
         "Predict CCAM codes knowing for the given service id"
 
+        dataset = self._make_dataset(tokens)
+
         model_path = self.model_mapping[service_id]
         ccam_model = CamembertForMultilabelClassification.from_pretrained(model_path)
         encoder = joblib.load(os.path.join(model_path, "encoder.joblib"))
 
-        output = ccam_model.predict(tokens)
+        output = ccam_model.predict(dataset)
         indicators = output > 0.5
         ccam_codes = encoder.inverse_transform(indicators)
 
@@ -80,31 +104,26 @@ class BertCCAMClassifier:
     def _predict(self, valid_documents):
         "End-to-end prediction of CCAM codes from document texts"
 
-        BATCH_SIZE = 16
-
         texts = [d["text"] for d in valid_documents]
 
-        tokens = self._tokenize(texts)
-        service_codes = self._predict_service(tokens)
+        tokenized_docs = self._tokenize(texts)
+        service_codes = self._predict_service(tokenized_docs)
 
-        for code, tokenized_doc, doc in zip(service_codes, tokens, valid_documents):
+        for code, tokens, doc in zip(service_codes, tokenized_docs, valid_documents):
             doc["service_code"] = code
-            doc["tokens"] = tokenized_doc
+            doc['tokens'] = tokens
 
+        # group documents by service id
         sorted_documents = sorted(valid_documents, key=lambda x: x["service_code"])
-
         service_groups = groupby(sorted_documents, key=lambda x: x["service_code"])
 
+        # predict CCAM separately for each group
         labeled_documents = []
         for service_id, group in service_groups:
             service_docs = list(group)
+            tokens = [doc['tokens'] for doc in service_docs]
 
-            dataset = tf.data.Dataset.from_tensor_slices(
-                self._tokenize(doc["text"] for doc in service_docs)
-            )
-            dataset = dataset.batch(BATCH_SIZE)
-
-            ccam_codes = self._predict_ccam(dataset, service_id)
+            ccam_codes = self._predict_ccam(tokens, service_id)
             for ccam, doc in zip(ccam_codes, service_docs):
                 doc["ccam_codes"] = ccam
             labeled_documents.extend(service_docs)
@@ -121,6 +140,7 @@ class BertCCAMClassifier:
 
         documents = [{"id": i, "text": doc} for i, doc in enumerate(documents)]
 
+        # remove invalid documents
         for doc in documents:
             if not isinstance(doc["text"], str):
                 i = doc["id"]
@@ -131,8 +151,10 @@ class BertCCAMClassifier:
 
         logger.info("classifier received %d valid inputs", len(valid_documents))
 
+        # run prediction
         docs_with_labels = self._predict(valid_documents)
 
+        # prepare output data
         for doc in docs_with_labels:
             results[doc["id"]]["labels"] = doc["ccam_codes"]
 
