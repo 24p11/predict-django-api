@@ -1,13 +1,16 @@
-import os
 import json
-import joblib
-from transformers import CamembertTokenizer
-
-from tf_codage.models import CamembertForMultilabelClassification
-from tf_codage.models import TFCamembertForSequenceClassification
-import tensorflow as tf
 import logging
+import os
 from itertools import groupby
+
+import joblib
+import tensorflow as tf
+
+from tf_codage.models import (
+    CamembertForMultilabelClassification,
+    TFCamembertForSequenceClassification,
+)
+from transformers import CamembertTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +56,7 @@ class BertCCAMClassifier:
                 doc,
                 max_length=self.MAX_LENGTH,
                 pad_to_max_length=True,
-                add_special_tokens=True
+                add_special_tokens=True,
             )
             for doc in valid_documents
         ]
@@ -65,7 +68,7 @@ class BertCCAMClassifier:
 
         merged_data = {}
 
-        for key in ['input_ids', 'attention_mask', 'token_type_ids']:
+        for key in ["input_ids", "attention_mask", "token_type_ids"]:
             values = tf.constant([tok[key] for tok in tokens])
             merged_data[key] = values
 
@@ -109,7 +112,7 @@ class BertCCAMClassifier:
 
         for code, tokens, doc in zip(service_codes, tokenized_docs, valid_documents):
             doc["service_code"] = code
-            doc['tokens'] = tokens
+            doc["tokens"] = tokens
 
         # group documents by service id
         sorted_documents = sorted(valid_documents, key=lambda x: x["service_code"])
@@ -119,7 +122,7 @@ class BertCCAMClassifier:
         labeled_documents = []
         for service_id, group in service_groups:
             service_docs = list(group)
-            tokens = [doc['tokens'] for doc in service_docs]
+            tokens = [doc["tokens"] for doc in service_docs]
 
             ccam_codes = self._predict_ccam(tokens, service_id)
             for ccam, doc in zip(ccam_codes, service_docs):

@@ -56,7 +56,6 @@ class DummyClassifierTest(TestCase):
         prediction = classifier.predict(["bert", "bartosz"] * 101)
         self.assertEqual(prediction, [{"labels": ("C",)}, {"labels": ("B",)}] * 101)
 
-
     def test_very_long_text(self):
         "Test if the classifier accepts texts longer than its inputs."
 
