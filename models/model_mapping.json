@@ -4,7 +4,7 @@
      {"service_id": "1",
       "path": "dummy_ccam_model"},
      {"service_id": "2",
-      "path": "dummy_ccam_model"},
+      "path": "dummy_ccam_model_cmd_2"},
      {"service_id": "3",
       "path": "dummy_ccam_model"}
  ]}
