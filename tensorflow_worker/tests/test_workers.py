@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 from unittest import TestCase, skipIf
 from unittest.mock import Mock
 
@@ -175,4 +177,53 @@ class TestRedisWorker(TestCase):
             json.loads(result),
             {"labels": ["ERROR"], "error_message": "can not parse string"},
         )
+
+
+    def test_worker_timeout(self):
+        "Test if worker stops waiting after specified timeout."
+
+        doc_id = "xx"
+        self.db.rpush(
+            self.QUEUE, json.dumps({"id": doc_id, "text": "mytext"}).encode("ascii"),
+        )
+        
+        # use timeout of 1 second
+        worker = RedisWorker(queue=self.QUEUE, timeout=1000)
+
+        predict = Mock(return_value=[{"labels": ["XXX111"]}] * 2)
+
+        # start worker in a thread
+        worker_thread = threading.Thread(target=worker.run_loop_once, args=(predict, ))
+        worker_thread.start()
+        time.sleep(0.1)
+
+        self.db.rpush(
+            self.QUEUE, json.dumps({"id": "yy", "text": "mytext 2"}).encode("ascii"),
+        )
+    
+        worker_thread.join()
+        predict.assert_called_once_with(["mytext", "mytext 2"])
+
+        # same thing should not work if timeout is disabled
+
+        self.db.rpush(
+            self.QUEUE, json.dumps({"id": '3', "text": "mytext 3"}).encode("ascii"),
+        )
+        
+        # no timeout (returns immediately)
+        worker = RedisWorker(queue=self.QUEUE, timeout=None)
+
+        predict = Mock(return_value=[{"labels": ["XXX111"]}] * 2)
+
+        # start worker in a thread
+        worker_thread = threading.Thread(target=worker.run_loop_once, args=(predict, ))
+        worker_thread.start()
+        time.sleep(0.1)
+
+        self.db.rpush(
+            self.QUEUE, json.dumps({"id": "4", "text": "mytext 4"}).encode("ascii"),
+        )
+    
+        worker_thread.join()
+        predict.assert_called_once_with(["mytext 3"])
 

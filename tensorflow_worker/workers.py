@@ -17,8 +17,10 @@ class RedisWorker:
 
     QUEUE = settings.REDIS_SURGERY_QUEUE
 
-    def __init__(self, max_batch_size=16, queue=None):
+    def __init__(self, max_batch_size=16, queue=None, timeout=None):
+        """Create a new worker that monitors jobs in queue and time outs after timeout."""
         logger.info("Connecting to redis at %s", settings.REDIS_HOST)
+        self.timeout = timeout
         self.db = redis.Redis(host=settings.REDIS_HOST)
         self.max_batch_size = max_batch_size
         self.wait_for_redis()
@@ -70,10 +72,17 @@ class RedisWorker:
         ids = [request_id]
 
         n_examples = 1
+        start_time = time.time()
         while n_examples < self.max_batch_size:
             serialized_data = self.db.lpop(self.QUEUE)
             if serialized_data is None:
-                break
+                current_time = time.time()
+                # if did not pass timeout yet wait for more jobs 
+                if self.timeout and (current_time - start_time) * 1000 < self.timeout:
+                    time.sleep(0.050)
+                    continue
+                else:
+                    break
             try:
                 request_id, text = self.deserialize(serialized_data)
                 texts.append(text)
