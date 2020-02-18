@@ -59,13 +59,13 @@ for test in tests_conf:
     N_REPEATS = test["n_repeats"]
 
     print(colored(title, "green", attrs=["bold"]))
-    print(colored("Serial requests 🏭", "red"))
+    print(colored("🏭 Serial requests", "red"))
     start = time.time()
     make_requests(text, n_request=N_REPEATS)
     elapsed = time.time() - start
     print(int(elapsed / N_REPEATS / N_INPUTS * 1000), "milliseconds per input")
 
-    print(colored("Concurrent requests 🚀", "red"))
+    print(colored("🚀 Concurrent requests", "red"))
     start = time.time()
     asyncio.run(make_async_requests(SHORT_TEXT, N_REPEATS))
     elapsed = time.time() - start
