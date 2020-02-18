@@ -1,10 +1,10 @@
-import requests
-import timeit
-import time
-import aiohttp
 import asyncio
+import time
+
+import requests
 from termcolor import colored
 
+import aiohttp
 
 N_INPUTS = 20
 URL = "http://127.0.0.1:8000/predict/"
@@ -28,6 +28,7 @@ def make_requests(text, n_request=20):
     REQUEST = {"inputs": [{"text": text}] * N_INPUTS}
     for i in range(n_request):
         response = requests.post(URL, json=REQUEST, headers=HEADERS)
+        assert response.status_code == 200, "Request failed"
 
     return response.content
 
