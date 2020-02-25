@@ -48,7 +48,7 @@ class PredictGenericView(APIView):
                 prediction_requests.append(json.dumps({"id": request_id, **input_data}))
 
             logger.info(
-                "queuing {} jobs for execution".format(len(prediction_requests))
+                "sending {} jobs to redis queue {}".format(len(prediction_requests), queue)
             )
             db.rpush(queue, *prediction_requests)
         else:

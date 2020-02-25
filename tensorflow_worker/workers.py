@@ -15,8 +15,6 @@ class MessageError(Exception):
 class RedisWorker:
     """Worker based on Redis queue."""
 
-    QUEUE = settings.REDIS_SURGERY_QUEUE
-
     def __init__(self, max_batch_size=16, queue=None, timeout=None):
         """Create a new worker that monitors jobs in queue and time outs after timeout."""
         logger.info("Connecting to redis at %s", settings.REDIS_HOST)
@@ -25,8 +23,7 @@ class RedisWorker:
         self.max_batch_size = max_batch_size
         self.wait_for_redis()
 
-        if queue:
-            self.QUEUE = queue
+        self.QUEUE = queue or settings.REDIS_SURGERY_QUEUE
 
     def wait_for_redis(self):
         "Wait for redis being ready."
