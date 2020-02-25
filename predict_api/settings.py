@@ -224,3 +224,4 @@ SWAGGER_SETTINGS = {
 
 REDIS_HOST = "redis"
 REDIS_SURGERY_QUEUE = "surgery_queue"
+REDIS_SEVERITY_LEVEL_QUEUE = "severity_queue"

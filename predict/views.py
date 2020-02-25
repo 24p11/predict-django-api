@@ -13,13 +13,15 @@ from rest_framework.schemas import AutoSchema
 
 from .serializers import (
     CCAMPredictionSerializer,
-    CCAMRequestSerializer,
+    RequestSerializer,
+    SeverityPredictionSerializer,
 )
 
 import logging
 
 db = redis.Redis(host=settings.REDIS_HOST)
 SURGERY_QUEUE = settings.REDIS_SURGERY_QUEUE
+SEVERITY_QUEUE = settings.REDIS_SEVERITY_LEVEL_QUEUE
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -72,13 +74,28 @@ class PredictGenericView(APIView):
 class CCAMCodesView(PredictGenericView):
     """Prediction of CCAM codes from CROs."""
 
-    request_serializer = CCAMRequestSerializer
+    request_serializer = RequestSerializer
     prediction_serializer = CCAMPredictionSerializer
     redis_queue = SURGERY_QUEUE
 
     @swagger_auto_schema(
         responses={200: CCAMPredictionSerializer, 400: "badly formatted request"},
-        request_body=CCAMRequestSerializer,
+        request_body=RequestSerializer,
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, *kwargs)
+
+
+class SeverityLevelsView(PredictGenericView):
+    """Prediction of severity level from CRHs."""
+
+    request_serializer = RequestSerializer
+    prediction_serializer = SeverityPredictionSerializer
+    redis_queue = SEVERITY_QUEUE
+
+    @swagger_auto_schema(
+        responses={200: SeverityPredictionSerializer, 400: "badly formatted request"},
+        request_body=RequestSerializer,
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, *kwargs)

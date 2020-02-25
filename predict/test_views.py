@@ -4,6 +4,8 @@ from users.models import User
 from rest_framework.authtoken.models import Token
 import json
 
+from django.conf import settings
+
 # Create your tests here.
 class TestPredictAPI(TestCase):
     @classmethod
@@ -25,7 +27,7 @@ class TestPredictAPI(TestCase):
         mget.return_value = [b'{"labels":["XXXTEST"]}']
 
         response = self.client.post(
-            "/predict/",
+            "/predict/ccam/",
             data=json.dumps({"inputs": [{"text": "Test"}]}),
             content_type="application/json",
             HTTP_AUTHORIZATION="Token {}".format(self.token),
@@ -46,7 +48,7 @@ class TestPredictAPI(TestCase):
         ]
 
         response = self.client.post(
-            "/predict/",
+            "/predict/ccam/",
             data=json.dumps(
                 {
                     "inputs": [
@@ -81,7 +83,7 @@ class TestPredictAPI(TestCase):
         ]
 
         response = self.client.post(
-            "/predict/",
+            "/predict/ccam/",
             data=json.dumps({"inputs": [{"text": "Test 1"}]}),
             content_type="application/json",
             HTTP_AUTHORIZATION="Token {}".format(self.token),
@@ -94,5 +96,26 @@ class TestPredictAPI(TestCase):
                     {"ccam_codes": ["ERROR"], "error_message": "error occurred"}
                 ]
             },
+        )
+
+    @mock.patch("redis.Redis.rpush")
+    @mock.patch("redis.Redis.mget")
+    def test_predict_severity_post(self, mget, rpush):
+        """Test request for severity level."""
+
+        mget.return_value = [b'{"labels":["XXXTEST"]}']
+
+        response = self.client.post(
+            "/predict/severity/",
+            data=json.dumps({"inputs": [{"text": "Test"}]}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"predictions": [{"severity": ["XXXTEST"]}]})
+
+        rpush.assert_called_once_with(
+            settings.REDIS_SEVERITY_LEVEL_QUEUE, mock.ANY,
         )
 
