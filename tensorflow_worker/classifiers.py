@@ -160,3 +160,12 @@ class BertCCAMClassifier:
             results[doc["id"]]["labels"] = doc["ccam_codes"]
 
         return results
+
+class CRHSeverityClassifier:
+    """Predict GHM severity level from 'compte rendu hospitalisation' (CRH)"""
+
+    def load_model(self, models_dir):
+        pass
+
+    def predict(self, documents):
+        return [{"labels": ["1"]}]
