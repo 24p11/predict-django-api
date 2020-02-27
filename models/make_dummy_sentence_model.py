@@ -6,6 +6,8 @@ import nltk
 import joblib
 from pathlib import Path
 
+tf.random.set_seed(83799)
+
 path = Path(sys.argv[1])
 
 def make_rnn(num_labels=4):
@@ -13,15 +15,13 @@ def make_rnn(num_labels=4):
     inputs_embeds = tf.keras.layers.Input(shape=(10, 192), name='inputs_embeds', dtype=tf.float32)
     attention_mask = tf.keras.layers.Input(shape=(10,), name="attention_mask", dtype=tf.int32)
 
-    rnn1 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(4, return_sequences=True, dropout=0.1))
-    rnn2 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(2, dropout=0.1, return_sequences=True))
-    rnn3 = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(2, dropout=0.1))
+    rnn = tf.keras.layers.SimpleRNN(8)
 
     dense = tf.keras.layers.Dense(num_labels)
 
-    mask=tf.cast(attention_mask, dtype=tf.bool)
+    mask = tf.cast(attention_mask, dtype=tf.bool)
 
-    output = dense(rnn3(rnn2(rnn1(inputs_embeds, mask=mask), mask=mask), mask=mask))
+    output = dense(rnn(inputs_embeds, mask=mask))
 
     sentence_model = tf.keras.Model(inputs=[inputs_embeds, attention_mask], outputs=output)
     
@@ -37,4 +37,5 @@ attention_mask = np.ones((1, 10), dtype=np.int32)
 
 output = sentence_model(dict(inputs_embeds=inputs_embeds, attention_mask=attention_mask))
 
-sentence_model.save(path / 'sentence_model', save_format='tf')
+print(sentence_model.summary())
+sentence_model.save(str(path / 'sentence_model'), save_format='tf')
