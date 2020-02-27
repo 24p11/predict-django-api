@@ -1,5 +1,5 @@
 from unittest import TestCase
-from tensorflow_worker.classifiers import BertCCAMClassifier
+from tensorflow_worker.classifiers import BertCCAMClassifier, CRHSeverityClassifier
 
 
 class DummyClassifierTest(TestCase):
@@ -64,3 +64,15 @@ class DummyClassifierTest(TestCase):
 
         prediction = classifier.predict(["bartosz " * 2001])
         self.assertEqual(prediction, [{"labels": ("B",)}])
+
+
+class CRHSeverityClassifierTests(TestCase):
+    """Test severity level classifier."""
+
+    def test_predict(self):
+        "Test predict method for basic inputs"
+
+        classifier = CRHSeverityClassifier()
+        classifier.load_model("models/dummy_crh_severity_model")
+        prediction = classifier.predict(["Bartosz. Ada."])
+        self.assertEqual(prediction, [{"labels": ("1")}])

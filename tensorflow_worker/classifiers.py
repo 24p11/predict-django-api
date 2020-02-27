@@ -4,13 +4,16 @@ import os
 from itertools import groupby
 
 import joblib
+import nltk
 import tensorflow as tf
 
 from tf_codage.models import (
     CamembertForMultilabelClassification,
     TFCamembertForSequenceClassification,
+    TFCamembertForSentenceEmbedding,
 )
 from transformers import CamembertTokenizer
+from tf_codage.data import create_sentence_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -161,11 +164,42 @@ class BertCCAMClassifier:
 
         return results
 
+
 class CRHSeverityClassifier:
     """Predict GHM severity level from 'compte rendu hospitalisation' (CRH)"""
 
-    def load_model(self, models_dir):
-        pass
+    MAX_SENTENCES = 512
+
+    def load_model(self, model_path):
+        """Load all required models.
+        
+        model_path: path to model directory"""
+
+        self.sentence_tokenizer = joblib.load(
+            os.path.join(model_path, "sentence_tokenizer.joblib")
+        )
+        self.word_tokenizer = CamembertTokenizer.from_pretrained(model_path)
+
+        self.sentence_embedding_model = TFCamembertForSentenceEmbedding.from_pretrained(
+            model_path
+        )
+        self.sentence_model = tf.keras.models.load_model(
+            os.path.join(model_path, "sentence_model")
+        )
 
     def predict(self, documents):
-        return [{"labels": ["1"]}]
+        """Predict severity level from raw text documents."""
+
+        dataset = create_sentence_dataset(
+            documents,
+            self.sentence_tokenizer,
+            self.word_tokenizer,
+            self.sentence_embedding_model,
+            max_sentences=self.MAX_SENTENCES,
+        )
+
+        output = self.sentence_model.predict(dataset.batch(1))
+
+        labels = [{"labels": str(severity + 1)} for severity in output]
+
+        return labels
