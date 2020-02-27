@@ -37,4 +37,4 @@ attention_mask = np.ones((1, 10), dtype=np.int32)
 
 output = sentence_model(dict(inputs_embeds=inputs_embeds, attention_mask=attention_mask))
 
-sentence_model.save(path / 'sentence_model.h5')
+sentence_model.save(path / 'sentence_model', save_format='tf')
