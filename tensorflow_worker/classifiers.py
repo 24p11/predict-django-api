@@ -199,7 +199,8 @@ class CRHSeverityClassifier:
         )
 
         output = self.sentence_model.predict(dataset.batch(1))
+        severity_levels = output.argmax(1) + 1
 
-        labels = [{"labels": str(severity + 1)} for severity in output]
+        labels = [{"labels": [str(severity)]} for severity in severity_levels]
 
         return labels

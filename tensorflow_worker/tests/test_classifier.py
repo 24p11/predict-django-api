@@ -75,4 +75,4 @@ class CRHSeverityClassifierTests(TestCase):
         classifier = CRHSeverityClassifier()
         classifier.load_model("models/dummy_crh_severity_model")
         prediction = classifier.predict(["Bartosz. Ada."])
-        self.assertEqual(prediction, [{"labels": ("1")}])
+        self.assertEqual(prediction, [{"labels": ["1"]}])

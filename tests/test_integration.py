@@ -1,8 +1,14 @@
-"Running integration test of the predict APIs"
+"""Running integration test of the predict APIs.
+
+Running the tests requires working docker services. To start them locally, use
+
+> docker-compose up
+"""
 
 from unittest import TestCase
 import requests
 from django.test import tag
+
 
 @tag("integration")
 class IntegrationTests(TestCase):
@@ -13,7 +19,8 @@ class IntegrationTests(TestCase):
         response = requests.post(
             "http://web:8000/predict/ccam/", 
             json={"inputs": [{"text": "hello"}]},
-            headers={"Authorization": "Token " + self.API_TOKEN})
+            headers={"Authorization": "Token " + self.API_TOKEN},
+            timeout=10)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"predictions": [{"ccam_codes": ['B']}]})
 
@@ -22,6 +29,7 @@ class IntegrationTests(TestCase):
         response = requests.post(
             "http://web:8000/predict/severity/", 
             json={"inputs": [{"text": "hello"}]},
-            headers={"Authorization": "Token " + self.API_TOKEN})
+            headers={"Authorization": "Token " + self.API_TOKEN},
+            timeout=10)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"predictions": [{"severity": ['1']}]})

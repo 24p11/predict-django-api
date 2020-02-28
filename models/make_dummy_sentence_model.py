@@ -25,9 +25,7 @@ def make_rnn(num_labels=4):
     dense1 = tf.keras.layers.Dense(16, activation='relu')
     dense2 = tf.keras.layers.Dense(num_labels)
 
-    mask = tf.cast(attention_mask, dtype=tf.bool)
-
-    output = dense2(dense1(rnn(inputs_embeds, mask=mask)))
+    output = dense2(dense1(rnn(inputs_embeds, mask=attention_mask)))
 
     sentence_model = tf.keras.Model(
         inputs=[inputs_embeds, attention_mask], outputs=output

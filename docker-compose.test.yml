@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  integration_tests:
+    build: .
+    command: python manage.py test --tag=integration
+    depends_on:
+      - web
+      - worker
+      - severity_worker
