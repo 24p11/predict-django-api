@@ -26,9 +26,6 @@ To use proxies
 > docker-compose build --build-arg HTTP_PROXY=http://... --build-arg HTTPS_PROXY=http://...
 ```
 
-
-(if your user does not have rights to start docker, you may need to use the docker-compose command with sudo)
-
 Configure the database and add the test users:
 
 ```
@@ -42,7 +39,10 @@ Then start all the services using the `docker-compose up` command:
 > docker-compose up
 ```
 
-This command will download all required Docker images (`redis`, `postgres`) and start them along with the django server and worker. The django server will listen on the port 8000.
+This command will download all required Docker images (`redis`) and start them along with the django server and workers. The django server will listen on the port 8000 by default (see "Environment variables).
+
+
+## Sample requests
 
 You can send request to the server using the cURL tool:
 
@@ -53,3 +53,53 @@ curl -X POST http://127.0.0.1:8000/predict/ccam/ \
     -d '{"inputs": [{"text": "hello"}]}' \
     -H "Content-Type: application/json"
 ```
+
+## Managing users
+
+API calls can be only done by authenticated users that identify with a valid API token.
+
+To create an initial superuser, you can use the command:
+
+```
+> docker-compose run web python manange.py createsuperuser
+```
+
+To generate a token for the created user:
+
+```
+> docker-compose run web python manage.py drf_create_token USERNAME
+```
+
+These commands will create an user with admin privilages. To manage/modify/create/delete
+normal users and their tokens, you can use the admin interface. Go to
+
+http://localhost:8000/admin/
+
+and login with you admin credentials to access the site.
+
+Alternatively, you can list, create, modify and delete users using the REST API:
+
+For example, to list users:
+
+```
+curl -X GET http://localhost:8000/users/  -H "Authorization: Token  ${API_TOKEN}"
+```
+
+or to create a user:
+
+```
+curl -X POST http://localhost:8000/users/     -H "Authorization: Token  ${API_TOKEN}" -d '{"username": "testuser", "password": "testuser", "is_active": true}' -H "Content-type: application/json"
+```
+
+## API documentation
+
+To see the OpenAPI (Swagger) docs, go to:
+
+```
+http://localhost:8000/docs/
+```
+
+## Environment variables
+
+* `DJANGO_API_PORT` - port that django should listen at
+* `TF_MODEL_PATH` - path to trained models
