@@ -9,7 +9,7 @@ services:
        dockerfile: ./tensorflow_worker/Dockerfile
     volumes:
       - .:/code
-      - ./models:/models
+      - ${TF_MODELS_PATH:-./models}:/models
     command: python manage.py start_worker BertCCAMClassifier /models
     depends_on:
       - redis
@@ -19,7 +19,7 @@ services:
        dockerfile: ./tensorflow_worker/Dockerfile
     volumes:
       - .:/code
-      - ./models:/models
+      - ${TF_MODELS_PATH:-./models}:/models
     command: python manage.py start_worker CRHSeverityClassifier /models/dummy_crh_severity_model --queue severity_queue
     depends_on:
       - redis
@@ -29,6 +29,6 @@ services:
     volumes:
       - .:/code
     ports:
-      - "8000:8000"
+      - "${DJANGO_API_PORT:-8000}:8000"
     depends_on:
       - redis
