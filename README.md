@@ -20,6 +20,13 @@ Then build the images for the django server and workers use:
 > docker-compose build
 ```
 
+To use proxies
+
+```
+> docker-compose build --build-arg HTTP_PROXY=http://... --build-arg HTTPS_PROXY=http://...
+```
+
+
 (if your user does not have rights to start docker, you may need to use the docker-compose command with sudo)
 
 Configure the database and add the test users:
