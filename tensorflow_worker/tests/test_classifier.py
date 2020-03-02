@@ -74,5 +74,24 @@ class CRHSeverityClassifierTests(TestCase):
 
         classifier = CRHSeverityClassifier()
         classifier.load_model("models/dummy_crh_severity_model")
+
         prediction = classifier.predict(["Bartosz. Ada."])
+        self.assertEqual(prediction, [{"labels": ["1"]}])
+
+        # mutliple texts
+        prediction = classifier.predict(["Bartosz. Ada."] * 5)
+        self.assertEqual(prediction, [{"labels": ["1"]}] * 5)
+
+    def test_very_long_text(self):
+        "Test if the classifier accepts texts longer than its inputs."
+
+        classifier = CRHSeverityClassifier()
+        classifier.load_model("models/dummy_crh_severity_model")
+
+        # many sentences
+        prediction = classifier.predict(["Bartosz. " * 600])
+        self.assertEqual(prediction, [{"labels": ["2"]}])
+
+        # long sentence
+        prediction = classifier.predict(["Ada " * 600 + "."])
         self.assertEqual(prediction, [{"labels": ["1"]}])
