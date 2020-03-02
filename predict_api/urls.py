@@ -14,7 +14,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.conf.urls import url
-from django.urls import include
+from django.urls import include, path
+from django.contrib import admin
 
 from rest_framework import routers
 
@@ -44,6 +45,7 @@ internal_urls = []
 
 urlpatterns = [
     url(r"^", include(router.urls)),
+    path('admin/', admin.site.urls),
     url(r"^docs/", schema_view),
     url(r"^predict/ccam/", CCAMCodesView.as_view()),
     url(r"^predict/severity/", SeverityLevelsView.as_view()),

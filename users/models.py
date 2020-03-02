@@ -26,10 +26,19 @@ from common.models import BaseModel
 #         user.save()
 
 
+class CustomUserManager(UserManager):
+
+    def create_superuser(self, username, email, password, **extra_fields):
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
+        return self._create_user(username, email, password, **extra_fields)
+
 class User(BaseModel, AbstractBaseUser):
-    objects = UserManager()
+    objects = CustomUserManager()
 
     USERNAME_FIELD = 'username'
+    EMAIL_FIELD = 'email'
+    REQUIRED_FIELDS = ['email']
 
     username = models.CharField(max_length=30, unique=True)
     email = models.EmailField('email address', max_length=254, unique=True, null=True)
@@ -40,4 +49,14 @@ class User(BaseModel, AbstractBaseUser):
     lastname = models.CharField(max_length=30, blank=True)
 
     def is_admin(self):
+        return self.is_superuser
+
+    @property
+    def is_staff(self):
+        return self.is_superuser
+
+    def has_perm(self, perm, obj=None):
+        return self.is_superuser
+
+    def has_module_perms(self, app_label):
         return self.is_superuser
