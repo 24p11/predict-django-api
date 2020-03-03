@@ -54,6 +54,20 @@ curl -X POST http://127.0.0.1:8000/predict/ccam/ \
     -H "Content-Type: application/json"
 ```
 
+## Trained models
+
+By default, the workers will load models from the `models` subdirectory. These models
+are only used for testing and they are trained on dummy data.
+
+To load the real models, copy them to a directory of choice than specify its path when 
+starting the docker services:
+
+`> TF_MODELS_PATH=/path/to/models docker-compose up`
+
+The directory should have the following structure:
+
+* `crh_severity_model` - modelling CRH
+
 ## Managing users
 
 API calls can be only done by authenticated users that identify with a valid API token.
