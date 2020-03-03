@@ -73,7 +73,7 @@ class CRHSeverityClassifierTests(TestCase):
         "Test predict method for basic inputs"
 
         classifier = CRHSeverityClassifier()
-        classifier.load_model("models/dummy_crh_severity_model")
+        classifier.load_model("models/crh_severity_model")
 
         prediction = classifier.predict(["Bartosz. Ada."])
         self.assertEqual(prediction, [{"labels": ["1"]}])
@@ -86,7 +86,7 @@ class CRHSeverityClassifierTests(TestCase):
         """Test if classifier can handle large data batches."""
 
         classifier = CRHSeverityClassifier()
-        classifier.load_model("models/dummy_crh_severity_model")
+        classifier.load_model("models/crh_severity_model")
         prediction = classifier.predict(["bert", "bartosz"] * 101)
         self.assertEqual(prediction, [{"labels": ["3"]}, {"labels": ["2"]}] * 101)
 
@@ -94,7 +94,7 @@ class CRHSeverityClassifierTests(TestCase):
         "Test if the classifier accepts texts longer than its inputs."
 
         classifier = CRHSeverityClassifier()
-        classifier.load_model("models/dummy_crh_severity_model")
+        classifier.load_model("models/crh_severity_model")
 
         # many sentences
         prediction = classifier.predict(["Bartosz. " * 600])

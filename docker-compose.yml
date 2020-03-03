@@ -20,7 +20,7 @@ services:
     volumes:
       - .:/code
       - ${TF_MODELS_PATH:-./models}:/models
-    command: python manage.py start_worker CRHSeverityClassifier /models/dummy_crh_severity_model --queue severity_queue
+    command: python manage.py start_worker CRHSeverityClassifier /models/crh_severity_model --queue severity_queue
     depends_on:
       - redis
   web:

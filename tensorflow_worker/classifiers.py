@@ -183,9 +183,15 @@ class CRHSeverityClassifier:
         self.sentence_embedding_model = TFCamembertForSentenceEmbedding.from_pretrained(
             model_path
         )
-        self.sentence_model = tf.keras.models.load_model(
-            os.path.join(model_path, "sentence_model")
-        )
+        model_path = os.path.join(model_path, "sentence_model")
+
+        if os.path.exists(model_path + '.h5'):
+            # HDF5 format
+            self.sentence_model = tf.keras.models.load_model(model_path + '.h5')
+        else:
+            # SavedModel (TF) format
+            self.sentence_model = tf.keras.models.load_model(model_path)
+       
 
     def predict(self, documents):
         """Predict severity level from raw text documents."""
