@@ -116,4 +116,4 @@ http://localhost:8000/docs/
 ## Environment variables
 
 * `DJANGO_API_PORT` - port that django should listen at
-* `TF_MODEL_PATH` - path to trained models
+* `TF_MODELS_PATH` - path to trained models
