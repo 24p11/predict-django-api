@@ -6,3 +6,4 @@ settings.py
 *.sqlite3
 .vscode/settings.json
 .python-version
+.env
