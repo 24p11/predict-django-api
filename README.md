@@ -75,7 +75,7 @@ API calls can be only done by authenticated users that identify with a valid API
 To create an initial superuser, you can use the command:
 
 ```
-> docker-compose run web python manange.py createsuperuser
+> docker-compose run web python manage.py createsuperuser
 ```
 
 To generate a token for the created user:
