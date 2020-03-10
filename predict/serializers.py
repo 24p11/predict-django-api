@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 
 class ReportSerializer(serializers.Serializer):
+    id = serializers.CharField(required=False)
     text = serializers.CharField(max_length=100000)
 
 
@@ -12,6 +13,7 @@ class RequestSerializer(serializers.Serializer):
 
 
 class CCAMSerializer(serializers.Serializer):
+    id = serializers.CharField()
     labels = serializers.ListField(
         child=serializers.CharField(max_length=12), source="ccam_codes"
     )
@@ -26,6 +28,7 @@ class CCAMPredictionSerializer(serializers.Serializer):
 
 class SeveritySerializer(serializers.Serializer):
     """Predicted severity levels."""
+    id = serializers.CharField()
 
     labels = serializers.ListField(
         child=serializers.CharField(max_length=12), source="severity"

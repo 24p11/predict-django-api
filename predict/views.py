@@ -43,12 +43,14 @@ class PredictGenericView(APIView):
             prediction_requests = []
             inputs = input_data.validated_data["inputs"]
             for input_data in inputs:
-                request_id = str(uuid.uuid4())
+                request_id = input_data.get("id", str(uuid.uuid4()))
                 request_ids.append(request_id)
                 prediction_requests.append(json.dumps({"id": request_id, **input_data}))
 
             logger.info(
-                "sending {} jobs to redis queue {}".format(len(prediction_requests), queue)
+                "sending {} jobs to redis queue {}".format(
+                    len(prediction_requests), queue
+                )
             )
             db.rpush(queue, *prediction_requests)
         else:
@@ -63,7 +65,10 @@ class PredictGenericView(APIView):
             d = json.loads(serialized_data)
             return d
 
-        results = [format_response(v) for v in predictions]
+        results = [
+            {"id": request_id, **format_response(v)}
+            for request_id, v in zip(request_ids, predictions)
+        ]
         prediction = prediction_serializer(data={"predictions": results})
 
         if prediction.is_valid():

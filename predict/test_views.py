@@ -35,8 +35,34 @@ class TestPredictAPI(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), {"predictions": [{"ccam_codes": ["XXXTEST"]}]}
+            response.json(),
+            {"predictions": [{"id": mock.ANY, "ccam_codes": ["XXXTEST"]}]},
         )
+
+    @mock.patch("redis.Redis.rpush")
+    @mock.patch("redis.Redis.mget")
+    def test_return_same_id(self, mget, rpush):
+        """Test if the same id is returned as passed with the request."""
+        mget.return_value = [b'{"id":"my-custom-id", "labels":["XXXTEST"]}']
+
+        response = self.client.post(
+            "/predict/ccam/",
+            data=json.dumps({"inputs": [{"id": "my-custom-id", "text": "Test"}]}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"predictions": [{"id": "my-custom-id", "ccam_codes": ["XXXTEST"]}]},
+        )
+
+        rpush.assert_called_once_with(
+            settings.REDIS_SURGERY_QUEUE,
+            json.dumps({"id": "my-custom-id", "text": "Test"}),
+        )
+        mget.assert_called_once_with(["my-custom-id"])
 
     @mock.patch("redis.Redis.rpush")
     @mock.patch("redis.Redis.mget")
@@ -66,9 +92,9 @@ class TestPredictAPI(TestCase):
             response.json(),
             {
                 "predictions": [
-                    {"ccam_codes": ["XXXTEST"]},
-                    {"ccam_codes": ["YYYTEST"]},
-                    {"ccam_codes": ["ZZZTEST"]},
+                    {"id": mock.ANY, "ccam_codes": ["XXXTEST"]},
+                    {"id": mock.ANY, "ccam_codes": ["YYYTEST"]},
+                    {"id": mock.ANY, "ccam_codes": ["ZZZTEST"]},
                 ]
             },
         )
@@ -93,7 +119,11 @@ class TestPredictAPI(TestCase):
             response.json(),
             {
                 "predictions": [
-                    {"ccam_codes": ["ERROR"], "error_message": "error occurred"}
+                    {
+                        "id": mock.ANY,
+                        "ccam_codes": ["ERROR"],
+                        "error_message": "error occurred",
+                    }
                 ]
             },
         )
@@ -113,9 +143,11 @@ class TestPredictAPI(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"predictions": [{"severity": ["XXXTEST"]}]})
+        self.assertEqual(
+            response.json(),
+            {"predictions": [{"id": mock.ANY, "severity": ["XXXTEST"]}]},
+        )
 
         rpush.assert_called_once_with(
             settings.REDIS_SEVERITY_LEVEL_QUEUE, mock.ANY,
         )
-
