@@ -4,6 +4,7 @@ import time
 import json
 import logging
 import os
+from predict.models import Prediction
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +48,14 @@ class RedisWorker:
             raise MessageError
 
         try:
-            text = data["text"]
-            request_id = data["id"]
+            text = data.pop("text")
+            request_id = data.pop("id")
+            meta = data
         except KeyError as exc:
             logger.error("Missing key '%s' in the message: %s", exc, serialized_data)
             raise MessageError
 
-        return request_id, text
+        return request_id, text, meta
 
     def run_loop_once(self, predict):
 
@@ -61,12 +63,13 @@ class RedisWorker:
         _, serialized_data = self.db.blpop(self.QUEUE)
 
         try:
-            request_id, text = self.deserialize(serialized_data)
+            request_id, text, meta = self.deserialize(serialized_data)
         except MessageError:
             return
 
         texts = [text]
         ids = [request_id]
+        metas = [meta]
 
         n_examples = 1
         start_time = time.time()
@@ -81,9 +84,10 @@ class RedisWorker:
                 else:
                     break
             try:
-                request_id, text = self.deserialize(serialized_data)
+                request_id, text, meta = self.deserialize(serialized_data)
                 texts.append(text)
                 ids.append(request_id)
+                metas.append(meta)
                 n_examples += 1
             except MessageError:
                 continue
@@ -102,9 +106,26 @@ class RedisWorker:
                 }
                 for _ in texts
             ]
-        logger.info("sending results")
-        for label_id, labels in zip(ids, outputs):
-            self.db.set(label_id, json.dumps(labels))
+
+        self.send_results(ids, outputs, metas)
+
+    def send_results(self, ids, outputs, metas):
+        """Send results via redis or persist them in the database."""
+
+        for label_id, labels, meta in zip(ids, outputs, metas):
+            if not meta.get("persist"):
+                logger.info("setting results for request id %s in redis", label_id)
+                self.db.set(label_id, json.dumps(labels))
+            else:
+                try: 
+                    logger.info("saving results for request id %s in the database", label_id)
+                    instance = Prediction.objects.get(id=label_id)
+                    instance.label_string = ",".join(labels['labels'])
+                    instance.error_message = labels.get('error_message')
+                    instance.save()
+                except Prediction.DoesNotExist:
+                    logger.error("missing database entry for request id %s", label_id)
+
 
     def run_loop(self, predict):
 

@@ -1,6 +1,7 @@
 from unittest import mock
 from django.test import TestCase
 from users.models import User
+from predict.models import Prediction
 from rest_framework.authtoken.models import Token
 import json
 
@@ -157,8 +158,9 @@ class TestPredictAPI(TestCase):
     def test_predict_asynchronous(self, mget, rpush):
         mget.return_value = [b'{"labels":["XXXTEST"]}']
 
+        # asynchronous mode
         response = self.client.post(
-            "/predict/ccam/?async",
+            "/predict/ccam/?asynch=1",
             data=json.dumps({"inputs": [{"id": "test", "text": "Test"}]}),
             content_type="application/json",
             HTTP_AUTHORIZATION="Token {}".format(self.token),
@@ -170,6 +172,24 @@ class TestPredictAPI(TestCase):
         )
         mget.assert_not_called()
         rpush.assert_called_with(
-            settings.REDIS_SURGERY_QUEUE, json.dumps({"id": "test",
-             "text": "Test"})
+            settings.REDIS_SURGERY_QUEUE,
+            json.dumps({"id": "test", "text": "Test", "persist": True}),
         )
+        self.assertTrue(Prediction.objects.filter(id="test").exists())
+
+        # synchronous mode
+        response = self.client.post(
+            "/predict/ccam/?asynch=0",
+            data=json.dumps({"inputs": [{"id": "test-2", "text": "Test"}]}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"predictions": [{"id": "test-2", "ccam_codes": ["XXXTEST"]}]},
+        )
+        mget.assert_called_with(["test-2"])
+        self.assertFalse(Prediction.objects.filter(id="test-2").exists())
+

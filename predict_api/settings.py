@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'drf_yasg',
 
     'predict_api',
+    'predict',
     'common',
     'users',
     'tensorflow_worker'

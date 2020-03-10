@@ -15,8 +15,7 @@ class RequestSerializer(serializers.Serializer):
 class CCAMSerializer(serializers.Serializer):
     id = serializers.CharField()
     labels = serializers.ListField(
-        child=serializers.CharField(max_length=12), source="ccam_codes",
-        required=False
+        child=serializers.CharField(max_length=12), source="ccam_codes", required=False
     )
     error_message = serializers.CharField(max_length=512, required=False)
 
@@ -29,6 +28,7 @@ class CCAMPredictionSerializer(serializers.Serializer):
 
 class SeveritySerializer(serializers.Serializer):
     """Predicted severity levels."""
+
     id = serializers.CharField()
 
     labels = serializers.ListField(
@@ -41,3 +41,14 @@ class SeverityPredictionSerializer(serializers.Serializer):
     """Serialize the surgery prediction result."""
 
     predictions = SeveritySerializer(many=True)
+
+
+class PredictQuerySerializer(serializers.Serializer):
+    """Define serializer for query parameters"""
+
+    asynch = serializers.ChoiceField(
+        choices=[0, 1], help_text="run prediction in asynchronous mode",
+        default=0,
+        required=False
+    )
+

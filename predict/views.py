@@ -15,7 +15,10 @@ from .serializers import (
     CCAMPredictionSerializer,
     RequestSerializer,
     SeverityPredictionSerializer,
+    PredictQuerySerializer,
 )
+
+from .models import Prediction
 
 import logging
 
@@ -37,6 +40,11 @@ class PredictGenericView(APIView):
         prediction_serializer = self.prediction_serializer
         queue = self.redis_queue
 
+        query = PredictQuerySerializer(data=request.query_params)
+        if not query.is_valid():
+            return Response(query.errors)
+        asynchronous = query.validated_data.get("asynch")
+
         input_data = request_serializer(data=request.data)
         if input_data.is_valid():
             request_ids = []
@@ -45,7 +53,10 @@ class PredictGenericView(APIView):
             for input_data in inputs:
                 request_id = input_data.get("id", str(uuid.uuid4()))
                 request_ids.append(request_id)
-                prediction_requests.append(json.dumps({"id": request_id, **input_data}))
+                request_data = {"id": request_id, **input_data}
+                if asynchronous:
+                    request_data['persist'] = True
+                prediction_requests.append(json.dumps(request_data))
 
             logger.info(
                 "sending {} jobs to redis queue {}".format(
@@ -57,9 +68,13 @@ class PredictGenericView(APIView):
             return Response(input_data.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-        if 'async' in request.query_params:
-            # return empty predictions
-            predictions = ['{}'] * len(request_ids)
+        if asynchronous: 
+            # return immediately
+            predictions = ["{}"] * len(request_ids)
+            for request_id in request_ids:
+                instance, _ = Prediction.objects.get_or_create(id=request_id)
+                instance.task = self.task
+                instance.save()
         else:
             # wait for results
             predictions = db.mget(request_ids)
@@ -88,10 +103,12 @@ class CCAMCodesView(PredictGenericView):
     request_serializer = RequestSerializer
     prediction_serializer = CCAMPredictionSerializer
     redis_queue = SURGERY_QUEUE
+    task = 'ccam'
 
     @swagger_auto_schema(
         responses={200: CCAMPredictionSerializer, 400: "badly formatted request"},
         request_body=RequestSerializer,
+        query_serializer=PredictQuerySerializer,
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, *kwargs)
@@ -103,10 +120,12 @@ class SeverityLevelsView(PredictGenericView):
     request_serializer = RequestSerializer
     prediction_serializer = SeverityPredictionSerializer
     redis_queue = SEVERITY_QUEUE
+    task = 'severity'
 
     @swagger_auto_schema(
         responses={200: SeverityPredictionSerializer, 400: "badly formatted request"},
         request_body=RequestSerializer,
+        query_serializer=PredictQuerySerializer,
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, *kwargs)

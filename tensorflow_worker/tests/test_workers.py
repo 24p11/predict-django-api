@@ -1,19 +1,19 @@
 import json
 import threading
 import time
-from unittest import TestCase, skipIf
+from unittest import skipIf
 from unittest.mock import Mock
 
-from django.test import tag
+import redis
+
+from django.conf import settings
+from django.test import TestCase, tag
+from predict.models import Prediction
 
 try:
     from tensorflow_worker.workers import RedisWorker
 except ModuleNotFoundError:
     RedisWorker = None
-
-import redis
-
-from django.conf import settings
 
 
 @skipIf(RedisWorker is None, "redis not available")
@@ -27,13 +27,16 @@ class TestRedisWorker(TestCase):
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
 
         cls.db = redis.Redis(settings.REDIS_HOST)
 
     def setUp(self):
+        super().setUp()
         self.db.flushdb()
 
     def tearDown(self):
+        super().tearDown()
         self.db.flushdb()
 
     def test_worker(self):
@@ -69,9 +72,7 @@ class TestRedisWorker(TestCase):
 
         worker = RedisWorker(max_batch_size=16, queue=self.QUEUE)
 
-        return_values = [
-            {"labels": [f"CCC00{i}"]} for i in [1, 3, 2]
-        ]
+        return_values = [{"labels": [f"CCC00{i}"]} for i in [1, 3, 2]]
         predict = Mock(return_value=return_values)
         worker.run_loop_once(predict)
 
@@ -150,13 +151,17 @@ class TestRedisWorker(TestCase):
         worker = RedisWorker(queue=self.QUEUE)
         with self.assertLogs("tensorflow_worker.workers", level="ERROR") as cm:
             worker.run_loop_once(predict)
-            self.assertRegex(cm.output[0] , "classifier exception")
+            self.assertRegex(cm.output[0], "classifier exception")
 
         for k in ["1", "2"]:
             result = self.db.get(k)
-            self.assertEqual(json.loads(result), 
-                {"labels": ["ERROR"],
-                 "error_message": "classifier raised an unexpected exception"})
+            self.assertEqual(
+                json.loads(result),
+                {
+                    "labels": ["ERROR"],
+                    "error_message": "classifier raised an unexpected exception",
+                },
+            )
 
     def test_classifier_returns_error_message(self):
         """Test if worker passes error message from classifier to the request handler."""
@@ -178,7 +183,6 @@ class TestRedisWorker(TestCase):
             {"labels": ["ERROR"], "error_message": "can not parse string"},
         )
 
-
     def test_worker_timeout(self):
         "Test if worker stops waiting after specified timeout."
 
@@ -186,44 +190,103 @@ class TestRedisWorker(TestCase):
         self.db.rpush(
             self.QUEUE, json.dumps({"id": doc_id, "text": "mytext"}).encode("ascii"),
         )
-        
+
         # use timeout of 1 second
         worker = RedisWorker(queue=self.QUEUE, timeout=1000)
 
         predict = Mock(return_value=[{"labels": ["XXX111"]}] * 2)
 
         # start worker in a thread
-        worker_thread = threading.Thread(target=worker.run_loop_once, args=(predict, ))
+        worker_thread = threading.Thread(target=worker.run_loop_once, args=(predict,))
         worker_thread.start()
         time.sleep(0.1)
 
         self.db.rpush(
             self.QUEUE, json.dumps({"id": "yy", "text": "mytext 2"}).encode("ascii"),
         )
-    
+
         worker_thread.join()
         predict.assert_called_once_with(["mytext", "mytext 2"])
 
         # same thing should not work if timeout is disabled
 
         self.db.rpush(
-            self.QUEUE, json.dumps({"id": '3', "text": "mytext 3"}).encode("ascii"),
+            self.QUEUE, json.dumps({"id": "3", "text": "mytext 3"}).encode("ascii"),
         )
-        
+
         # no timeout (returns immediately)
         worker = RedisWorker(queue=self.QUEUE, timeout=None)
 
         predict = Mock(return_value=[{"labels": ["XXX111"]}] * 2)
 
         # start worker in a thread
-        worker_thread = threading.Thread(target=worker.run_loop_once, args=(predict, ))
+        worker_thread = threading.Thread(target=worker.run_loop_once, args=(predict,))
         worker_thread.start()
         time.sleep(0.1)
 
         self.db.rpush(
             self.QUEUE, json.dumps({"id": "4", "text": "mytext 4"}).encode("ascii"),
         )
-    
+
         worker_thread.join()
         predict.assert_called_once_with(["mytext 3"])
+
+    def test_persist_results_in_database(self):
+        """Test saving prediction to database when presist=True."""
+
+        doc_id = "xx"
+        self.db.rpush(
+            self.QUEUE,
+            json.dumps({"id": doc_id, "text": "mytext", "persist": True}).encode(
+                "ascii"
+            ),
+        )
+        Prediction.objects.create(id=doc_id)
+        worker = RedisWorker(queue=self.QUEUE)
+
+        predict = Mock(return_value=[{"labels": ["XXX111"]}])
+        worker.run_loop_once(predict)
+        predict.assert_called_once_with(["mytext"])
+
+        data = self.db.get(doc_id)
+
+        self.assertIsNone(data)
+
+        self.assertEqual(Prediction.objects.get(id=doc_id).labels, ["XXX111"])
+
+        # test with multiple labels
+
+        self.db.rpush(
+            self.QUEUE,
+            json.dumps({"id": doc_id, "text": "mytext", "persist": True}).encode(
+                "ascii"
+            ),
+        )
+
+        predict = Mock(return_value=[{"labels": ["YYY001", "YYY002"]}])
+        worker.run_loop_once(predict)
+        data = self.db.get(doc_id)
+        self.assertIsNone(data)
+
+        self.assertEqual(Prediction.objects.get(id=doc_id).labels, ["YYY001", "YYY002"])
+
+
+        # test with error message
+
+        self.db.rpush(
+            self.QUEUE,
+            json.dumps({"id": doc_id, "text": "mytext", "persist": True}).encode(
+                "ascii"
+            ),
+        )
+
+        predict = Mock(return_value=[{"labels": ["ERROR"], "error_message": "test error"}])
+        worker.run_loop_once(predict)
+        data = self.db.get(doc_id)
+        self.assertIsNone(data)
+
+        instance = Prediction.objects.get(id=doc_id)
+        self.assertEqual(instance.labels, ["ERROR"])
+        self.assertEqual(instance.error_message, "test error")
+
 
