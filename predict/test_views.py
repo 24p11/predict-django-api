@@ -176,6 +176,7 @@ class TestPredictAPI(TestCase):
             json.dumps({"id": "test", "text": "Test", "persist": True}),
         )
         self.assertTrue(Prediction.objects.filter(id="test").exists())
+        self.assertEqual(Prediction.objects.get(id="test").task, "ccam")
 
         # synchronous mode
         response = self.client.post(
@@ -192,4 +193,3 @@ class TestPredictAPI(TestCase):
         )
         mget.assert_called_with(["test-2"])
         self.assertFalse(Prediction.objects.filter(id="test-2").exists())
-
