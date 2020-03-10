@@ -1,7 +1,9 @@
 from unittest import TestCase
 from tensorflow_worker.classifiers import BertCCAMClassifier, CRHSeverityClassifier
+from django.test import tag
 
 
+@tag("worker")
 class DummyClassifierTest(TestCase):
     def test_predict(self):
         """Test prediction by dummy BERT classifier."""
@@ -66,6 +68,7 @@ class DummyClassifierTest(TestCase):
         self.assertEqual(prediction, [{"labels": ("B",)}])
 
 
+@tag("worker")
 class CRHSeverityClassifierTests(TestCase):
     """Test severity level classifier."""
 

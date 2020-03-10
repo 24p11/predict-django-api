@@ -20,7 +20,7 @@ class IntegrationTests(TestCase):
             "http://web:8000/predict/ccam/", 
             json={"inputs": [{"text": "hello"}]},
             headers={"Authorization": "Token " + self.API_TOKEN},
-            timeout=10)
+            timeout=30)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"predictions": [{"ccam_codes": ['B']}]})
 
@@ -30,6 +30,6 @@ class IntegrationTests(TestCase):
             "http://web:8000/predict/severity/", 
             json={"inputs": [{"text": "hello"}]},
             headers={"Authorization": "Token " + self.API_TOKEN},
-            timeout=10)
+            timeout=30)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"predictions": [{"severity": ['1']}]})
+        self.assertEqual(response.json(), {"predictions": [{"severity": ['3']}]})
