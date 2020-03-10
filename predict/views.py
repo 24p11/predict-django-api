@@ -56,10 +56,16 @@ class PredictGenericView(APIView):
         else:
             return Response(input_data.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        predictions = db.mget(request_ids)
-        while None in predictions:
-            time.sleep(0.01)
+
+        if 'async' in request.query_params:
+            # return empty predictions
+            predictions = ['{}'] * len(request_ids)
+        else:
+            # wait for results
             predictions = db.mget(request_ids)
+            while None in predictions:
+                time.sleep(0.01)
+                predictions = db.mget(request_ids)
 
         def format_response(serialized_data):
             d = json.loads(serialized_data)

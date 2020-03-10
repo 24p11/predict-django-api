@@ -151,3 +151,25 @@ class TestPredictAPI(TestCase):
         rpush.assert_called_once_with(
             settings.REDIS_SEVERITY_LEVEL_QUEUE, mock.ANY,
         )
+
+    @mock.patch("redis.Redis.rpush")
+    @mock.patch("redis.Redis.mget")
+    def test_predict_asynchronous(self, mget, rpush):
+        mget.return_value = [b'{"labels":["XXXTEST"]}']
+
+        response = self.client.post(
+            "/predict/ccam/?async",
+            data=json.dumps({"inputs": [{"id": "test", "text": "Test"}]}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(), {"predictions": [{"id": "test"}]},
+        )
+        mget.assert_not_called()
+        rpush.assert_called_with(
+            settings.REDIS_SURGERY_QUEUE, json.dumps({"id": "test",
+             "text": "Test"})
+        )
