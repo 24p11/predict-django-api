@@ -24,7 +24,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
 from users.views import UserViewSet
-from predict.views import CCAMCodesView, SeverityLevelsView
+from predict.views import CCAMCodesView, SeverityLevelsView, CCAMPredictionView
 
 # Routers provide an easy way of automatically determining the URL conf.
 router = routers.DefaultRouter()
@@ -47,7 +47,8 @@ urlpatterns = [
     url(r"^", include(router.urls)),
     path('admin/', admin.site.urls),
     url(r"^docs/", schema_view),
-    url(r"^predict/ccam/", CCAMCodesView.as_view()),
+    path("predict/ccam/", CCAMCodesView.as_view()),
+    path("predict/ccam/<str:pk>/", CCAMPredictionView.as_view()),
     url(r"^predict/severity/", SeverityLevelsView.as_view()),
     url(r"^accounts/", include("rest_framework.urls")),
 ]

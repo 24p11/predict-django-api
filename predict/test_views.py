@@ -193,3 +193,26 @@ class TestPredictAPI(TestCase):
         )
         mget.assert_called_with(["test-2"])
         self.assertFalse(Prediction.objects.filter(id="test-2").exists())
+
+    def test_ccam_prediction_view(self):
+        """Test retrieving persisted CCAM prediction."""
+
+        Prediction.objects.create(id='my-id', label_string="A,F", task='ccam')
+
+        response = self.client.get("/predict/ccam/my-id/", HTTP_AUTHORIZATION="Token {}".format(self.token))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"id": "my-id", "ccam_codes": ['A', 'F'], 'error_message': None})
+
+        # non-existent id
+        response = self.client.get("/predict/ccam/id-does-not-exist/", HTTP_AUTHORIZATION="Token {}".format(self.token))
+        self.assertEqual(response.status_code, 404)
+
+        # non-authorised
+        response = self.client.get("/predict/ccam/my-id/", HTTP_AUTHORIZATION="Token INVALIDTOKEN")
+        self.assertEqual(response.status_code, 401)
+
+        # prediction for a different task
+        Prediction.objects.create(id='my-severity-id', label_string="1", task='severity')
+        response = self.client.get("/predict/ccam/my-severity-id/", HTTP_AUTHORIZATION="Token {}".format(self.token))
+        self.assertEqual(response.status_code, 404)
