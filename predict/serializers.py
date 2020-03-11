@@ -18,7 +18,7 @@ class CCAMSerializer(serializers.Serializer):
         child=serializers.CharField(max_length=12), source="labels", required=False
     )
     error_message = serializers.CharField(max_length=512, required=False)
-    status = serializers.CharField(max_length=8, default='done')
+    status = serializers.ChoiceField(default='done', choices=['queued', 'done', 'error'])
 
 
 class CCAMPredictionSerializer(serializers.Serializer):
@@ -52,4 +52,3 @@ class PredictQuerySerializer(serializers.Serializer):
         default=0,
         required=False
     )
-
