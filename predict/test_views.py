@@ -197,22 +197,37 @@ class TestPredictAPI(TestCase):
     def test_ccam_prediction_view(self):
         """Test retrieving persisted CCAM prediction."""
 
-        Prediction.objects.create(id='my-id', label_string="A,F", task='ccam')
+        Prediction.objects.create(id="my-id", label_string="A,F", task="ccam")
 
-        response = self.client.get("/predict/ccam/my-id/", HTTP_AUTHORIZATION="Token {}".format(self.token))
+        response = self.client.get(
+            "/predict/ccam/my-id/", HTTP_AUTHORIZATION="Token {}".format(self.token)
+        )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"id": "my-id", "ccam_codes": ['A', 'F'], 'error_message': None})
+        self.assertEqual(
+            response.json(),
+            {"id": "my-id", "ccam_codes": ["A", "F"], "error_message": None},
+        )
 
         # non-existent id
-        response = self.client.get("/predict/ccam/id-does-not-exist/", HTTP_AUTHORIZATION="Token {}".format(self.token))
+        response = self.client.get(
+            "/predict/ccam/id-does-not-exist/",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
         self.assertEqual(response.status_code, 404)
 
         # non-authorised
-        response = self.client.get("/predict/ccam/my-id/", HTTP_AUTHORIZATION="Token INVALIDTOKEN")
+        response = self.client.get(
+            "/predict/ccam/my-id/", HTTP_AUTHORIZATION="Token INVALIDTOKEN"
+        )
         self.assertEqual(response.status_code, 401)
 
         # prediction for a different task
-        Prediction.objects.create(id='my-severity-id', label_string="1", task='severity')
-        response = self.client.get("/predict/ccam/my-severity-id/", HTTP_AUTHORIZATION="Token {}".format(self.token))
+        Prediction.objects.create(
+            id="my-severity-id", label_string="1", task="severity"
+        )
+        response = self.client.get(
+            "/predict/ccam/my-severity-id/",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
         self.assertEqual(response.status_code, 404)

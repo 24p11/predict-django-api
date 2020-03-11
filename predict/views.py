@@ -13,7 +13,8 @@ from rest_framework.response import Response
 from rest_framework.schemas import AutoSchema
 
 from .serializers import (
-    CCAMPredictionSerializer, CCAMSerializer,
+    CCAMPredictionSerializer,
+    CCAMSerializer,
     RequestSerializer,
     SeverityPredictionSerializer,
     PredictQuerySerializer,
@@ -56,7 +57,7 @@ class PredictGenericView(APIView):
                 request_ids.append(request_id)
                 request_data = {"id": request_id, **input_data}
                 if asynchronous:
-                    request_data['persist'] = True
+                    request_data["persist"] = True
                 prediction_requests.append(json.dumps(request_data))
 
             logger.info(
@@ -68,8 +69,7 @@ class PredictGenericView(APIView):
         else:
             return Response(input_data.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-        if asynchronous: 
+        if asynchronous:
             # return immediately
             predictions = ["{}"] * len(request_ids)
             for request_id in request_ids:
@@ -102,7 +102,7 @@ class CCAMCodesView(PredictGenericView):
     request_serializer = RequestSerializer
     prediction_serializer = CCAMPredictionSerializer
     redis_queue = SURGERY_QUEUE
-    task = 'ccam'
+    task = "ccam"
 
     @swagger_auto_schema(
         responses={200: CCAMPredictionSerializer, 400: "badly formatted request"},
@@ -119,7 +119,7 @@ class SeverityLevelsView(PredictGenericView):
     request_serializer = RequestSerializer
     prediction_serializer = SeverityPredictionSerializer
     redis_queue = SEVERITY_QUEUE
-    task = 'severity'
+    task = "severity"
 
     @swagger_auto_schema(
         responses={200: SeverityPredictionSerializer, 400: "badly formatted request"},
@@ -131,5 +131,5 @@ class SeverityLevelsView(PredictGenericView):
 
 
 class CCAMPredictionView(generics.RetrieveAPIView):
-    queryset = Prediction.objects.filter(task='ccam')
+    queryset = Prediction.objects.filter(task="ccam")
     serializer_class = CCAMSerializer
