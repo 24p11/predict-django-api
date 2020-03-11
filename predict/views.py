@@ -90,11 +90,9 @@ class PredictGenericView(APIView):
             {"id": request_id, **format_response(v)}
             for request_id, v in zip(request_ids, predictions)
         ]
-        prediction = prediction_serializer(data={"predictions": results})
+        prediction = prediction_serializer({"predictions": results})
 
-        if prediction.is_valid():
-            return Response(prediction.validated_data)
-        return Response(prediction.errors)
+        return Response(prediction.data)
 
 
 class CCAMCodesView(PredictGenericView):

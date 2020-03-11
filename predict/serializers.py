@@ -14,8 +14,8 @@ class RequestSerializer(serializers.Serializer):
 
 class CCAMSerializer(serializers.Serializer):
     id = serializers.CharField()
-    labels = serializers.ListField(
-        child=serializers.CharField(max_length=12), source="ccam_codes", required=False
+    ccam_codes = serializers.ListField(
+        child=serializers.CharField(max_length=12), source="labels", required=False
     )
     error_message = serializers.CharField(max_length=512, required=False)
 
@@ -31,8 +31,8 @@ class SeveritySerializer(serializers.Serializer):
 
     id = serializers.CharField()
 
-    labels = serializers.ListField(
-        child=serializers.CharField(max_length=12), source="severity", required=False
+    severity = serializers.ListField(
+        child=serializers.CharField(max_length=12), source="labels", required=False
     )
     error_message = serializers.CharField(max_length=512, required=False)
 
