@@ -113,6 +113,7 @@ class RedisWorker:
         """Send results via redis or persist them in the database."""
 
         for label_id, labels, meta in zip(ids, outputs, metas):
+            labels['status'] = 'error' if "error_message" in labels else "done"
             if not meta.get("persist"):
                 logger.info("setting results for request id %s in redis", label_id)
                 self.db.set(label_id, json.dumps(labels))
@@ -122,6 +123,7 @@ class RedisWorker:
                     instance = Prediction.objects.get(id=label_id)
                     instance.label_string = ",".join(labels['labels'])
                     instance.error_message = labels.get('error_message')
+                    instance.status = labels['status']
                     instance.save()
                 except Prediction.DoesNotExist:
                     logger.error("missing database entry for request id %s", label_id)

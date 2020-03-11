@@ -54,7 +54,7 @@ class TestRedisWorker(TestCase):
 
         data = self.db.get(doc_id)
 
-        assert data == b'{"labels": ["XXX111"]}'
+        assert data == b'{"labels": ["XXX111"], "status": "done"}'
 
     def job(self, doc_id, text):
         return self.db.rpush(
@@ -80,7 +80,7 @@ class TestRedisWorker(TestCase):
 
         for i in range(1, 4):
             data = self.db.get(str(i))
-            self.assertEqual(json.loads(data), {"labels": [f"CCC00{i}"]})
+            self.assertEqual(json.loads(data), {"labels": [f"CCC00{i}"], "status": "done"})
 
     def test_worker_batch_size(self):
         "Test setting batch size."
@@ -95,17 +95,17 @@ class TestRedisWorker(TestCase):
         predict = Mock(return_value=[{"labels": ["CCC001"]}])
         worker.run_loop_once(predict)
         predict.assert_called_once_with(["my text 1"])
-        self.assertEqual(json.loads(self.db.get("1")), {"labels": ["CCC001"]})
+        self.assertEqual(json.loads(self.db.get("1")), {"labels": ["CCC001"], "status": "done"})
 
         predict.reset_mock()
 
         worker.run_loop_once(predict)
         predict.assert_called_once_with(["my text 3"])
-        self.assertEqual(json.loads(self.db.get("3")), {"labels": ["CCC001"]})
+        self.assertEqual(json.loads(self.db.get("3")), {"labels": ["CCC001"], "status": "done"})
         predict.reset_mock()
 
         worker.run_loop_once(predict)
-        self.assertEqual(json.loads(self.db.get("2")), {"labels": ["CCC001"]})
+        self.assertEqual(json.loads(self.db.get("2")), {"labels": ["CCC001"], "status": "done"})
         predict.assert_called_once_with(["my text 2"])
 
     def test_worker_badly_formatted_data(self):
@@ -132,9 +132,9 @@ class TestRedisWorker(TestCase):
             self.assertRegex(cm.output[1], "badly formatted")
 
         result = self.db.get("2")
-        self.assertEqual(json.loads(result), {"labels": ["A"]})
+        self.assertEqual(json.loads(result), {"labels": ["A"], "status": "done"})
         result = self.db.get("3")
-        self.assertEqual(json.loads(result), {"labels": ["B"]})
+        self.assertEqual(json.loads(result), {"labels": ["B"], "status": "done"})
         predict.assert_called_once_with(["hi there", "hello?"])
 
     def test_classifier_raises(self):
@@ -160,6 +160,7 @@ class TestRedisWorker(TestCase):
                 {
                     "labels": ["ERROR"],
                     "error_message": "classifier raised an unexpected exception",
+                    "status": "error"
                 },
             )
 
@@ -180,7 +181,7 @@ class TestRedisWorker(TestCase):
         result = self.db.get("1")
         self.assertEqual(
             json.loads(result),
-            {"labels": ["ERROR"], "error_message": "can not parse string"},
+            {"labels": ["ERROR"], "error_message": "can not parse string", "status": "error"},
         )
 
     def test_worker_timeout(self):
@@ -268,7 +269,9 @@ class TestRedisWorker(TestCase):
         data = self.db.get(doc_id)
         self.assertIsNone(data)
 
-        self.assertEqual(Prediction.objects.get(id=doc_id).labels, ["YYY001", "YYY002"])
+        instance = Prediction.objects.get(id=doc_id)
+        self.assertEqual(instance.labels, ["YYY001", "YYY002"])
+        self.assertEqual(instance.status, "done")
 
 
         # test with error message
@@ -287,6 +290,5 @@ class TestRedisWorker(TestCase):
 
         instance = Prediction.objects.get(id=doc_id)
         self.assertEqual(instance.labels, ["ERROR"])
+        self.assertEqual(instance.status, "error")
         self.assertEqual(instance.error_message, "test error")
-
-

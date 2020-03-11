@@ -37,7 +37,7 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"predictions": [{"id": mock.ANY, "ccam_codes": ["XXXTEST"]}]},
+            {"predictions": [{"id": mock.ANY, "ccam_codes": ["XXXTEST"], "status": "done"}]},
         )
 
     @mock.patch("redis.Redis.rpush")
@@ -56,7 +56,7 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"predictions": [{"id": "my-custom-id", "ccam_codes": ["XXXTEST"]}]},
+            {"predictions": [{"id": "my-custom-id", "ccam_codes": ["XXXTEST"], "status": "done"}]},
         )
 
         rpush.assert_called_once_with(
@@ -93,9 +93,9 @@ class TestPredictAPI(TestCase):
             response.json(),
             {
                 "predictions": [
-                    {"id": mock.ANY, "ccam_codes": ["XXXTEST"]},
-                    {"id": mock.ANY, "ccam_codes": ["YYYTEST"]},
-                    {"id": mock.ANY, "ccam_codes": ["ZZZTEST"]},
+                    {"id": mock.ANY, "ccam_codes": ["XXXTEST"], "status": "done"},
+                    {"id": mock.ANY, "ccam_codes": ["YYYTEST"], "status": "done"},
+                    {"id": mock.ANY, "ccam_codes": ["ZZZTEST"], "status": "done"},
                 ]
             },
         )
@@ -106,7 +106,7 @@ class TestPredictAPI(TestCase):
         "test if errors returned by classifer are returned to user."
 
         mget.return_value = [
-            b'{"labels": ["ERROR"], "error_message": "error occurred"}'
+            b'{"labels": ["ERROR"], "error_message": "error occurred", "status": "error"}'
         ]
 
         response = self.client.post(
@@ -123,6 +123,7 @@ class TestPredictAPI(TestCase):
                     {
                         "id": mock.ANY,
                         "ccam_codes": ["ERROR"],
+                        "status": "error",
                         "error_message": "error occurred",
                     }
                 ]
@@ -168,7 +169,7 @@ class TestPredictAPI(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
-            response.json(), {"predictions": [{"id": "test"}]},
+            response.json(), {"predictions": [{"id": "test", "status": "queued"}]},
         )
         mget.assert_not_called()
         rpush.assert_called_with(
@@ -176,7 +177,9 @@ class TestPredictAPI(TestCase):
             json.dumps({"id": "test", "text": "Test", "persist": True}),
         )
         self.assertTrue(Prediction.objects.filter(id="test").exists())
-        self.assertEqual(Prediction.objects.get(id="test").task, "ccam")
+        instance = Prediction.objects.get(id="test")
+        self.assertEqual(instance.task, "ccam")
+        self.assertEqual(instance.status, "queued")
 
         # synchronous mode
         response = self.client.post(
@@ -189,7 +192,7 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"predictions": [{"id": "test-2", "ccam_codes": ["XXXTEST"]}]},
+            {"predictions": [{"id": "test-2", "ccam_codes": ["XXXTEST"], "status": "done"}]},
         )
         mget.assert_called_with(["test-2"])
         self.assertFalse(Prediction.objects.filter(id="test-2").exists())
@@ -197,7 +200,7 @@ class TestPredictAPI(TestCase):
     def test_ccam_prediction_view(self):
         """Test retrieving persisted CCAM prediction."""
 
-        Prediction.objects.create(id="my-id", label_string="A,F", task="ccam")
+        Prediction.objects.create(id="my-id", label_string="A,F", task="ccam", status="queued")
 
         response = self.client.get(
             "/predict/ccam/my-id/", HTTP_AUTHORIZATION="Token {}".format(self.token)
@@ -206,7 +209,7 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"id": "my-id", "ccam_codes": ["A", "F"], "error_message": None},
+            {"id": "my-id", "ccam_codes": ["A", "F"], "error_message": None, "status": "queued"},
         )
 
         # non-existent id

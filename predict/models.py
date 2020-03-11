@@ -3,7 +3,6 @@ import uuid
 
 # Create your models here.
 
-
 class Prediction(models.Model):
     """Prediction model.
 
@@ -13,9 +12,14 @@ class Prediction(models.Model):
     id = models.CharField(
         max_length=80, primary_key=True, default=uuid.uuid4, editable=False
     )
-    task = models.CharField(max_length=10)
+    task = models.CharField(max_length=10, null=False)
     label_string = models.CharField(max_length=255, null=True)
     error_message = models.CharField(max_length=512, null=True)
+    status = models.CharField(
+        max_length=8,
+        blank=False,
+        choices=[("queued", "queued"), ("done", "done"), ("error", "error")],
+    )
 
     @property
     def labels(self):

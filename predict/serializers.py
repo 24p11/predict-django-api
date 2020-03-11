@@ -18,6 +18,7 @@ class CCAMSerializer(serializers.Serializer):
         child=serializers.CharField(max_length=12), source="labels", required=False
     )
     error_message = serializers.CharField(max_length=512, required=False)
+    status = serializers.CharField(max_length=8, default='done')
 
 
 class CCAMPredictionSerializer(serializers.Serializer):

@@ -71,10 +71,11 @@ class PredictGenericView(APIView):
 
         if asynchronous:
             # return immediately
-            predictions = ["{}"] * len(request_ids)
+            predictions = ['{"status": "queued"}'] * len(request_ids)
             for request_id in request_ids:
                 instance, _ = Prediction.objects.get_or_create(id=request_id)
                 instance.task = self.task
+                instance.status = 'queued'
                 instance.save()
         else:
             # wait for results
