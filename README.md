@@ -54,6 +54,41 @@ curl -X POST http://127.0.0.1:8000/predict/ccam/ \
     -H "Content-Type: application/json"
 ```
 
+## Asynchronous requests
+
+To make the predictions asynchronously, add the `asynch=1` option to query parameters. For example, to
+predict the severity level:
+
+```
+curl -X POST http://127.0.0.1:8000/predict/severity/?asynch=1 \
+    -H "Authorization: Token  ${API_TOKEN}" \
+    -d '{"inputs": [{"text": "hello"}]}' \
+    -H "Content-Type: application/json"
+```
+
+The request returns response immediately, with the format:
+
+```
+{"predictions":[{"id":"dd3a323c-5829-45ea-a8b0-c45b7d9a53ae","status":"queued"}]}
+```
+
+To check whether the prediction is finished, query the `/predict/severity/<ID>/` endpoint (GET method), where
+the `<ID>` should be replaced with the `id` field returned in the response.
+
+In the above case:
+
+```
+curl -X GET http://127.0.0.1:8000/predict/severity/dd3a323c-5829-45ea-a8b0-c45b7d9a53ae/ \
+    -H "Authorization: Token  ${API_TOKEN}" \
+    -H "Content-Type: application/json"
+```
+
+Which returns `status` of the prediction and the prediction code if `status` is `done`:
+
+```
+{"id":"dd3a323c-5829-45ea-a8b0-c45b7d9a53ae","error_message":null,"status":"done","severity":["3"]}
+```
+
 ## Trained models
 
 By default, the workers will load models from the `models` subdirectory. These models
