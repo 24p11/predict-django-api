@@ -12,13 +12,24 @@ class RequestSerializer(serializers.Serializer):
     inputs = ReportSerializer(many=True)
 
 
-class CCAMSerializer(serializers.Serializer):
+class PredictionSerializer(serializers.Serializer):
+    """Generic serializer for predictions.
+    
+    It has to be subclassed with the right field type/name for predicted labels."""
+
     id = serializers.CharField()
+    error_message = serializers.CharField(max_length=512, required=False)
+    status = serializers.ChoiceField(
+        default="done", choices=["queued", "done", "error"]
+    )
+
+
+class CCAMSerializer(PredictionSerializer):
+    """Serializer for CCAM codes prediction."""
+
     ccam_codes = serializers.ListField(
         child=serializers.CharField(max_length=12), source="labels", required=False
     )
-    error_message = serializers.CharField(max_length=512, required=False)
-    status = serializers.ChoiceField(default='done', choices=['queued', 'done', 'error'])
 
 
 class CCAMPredictionSerializer(serializers.Serializer):
@@ -27,15 +38,12 @@ class CCAMPredictionSerializer(serializers.Serializer):
     predictions = CCAMSerializer(many=True)
 
 
-class SeveritySerializer(serializers.Serializer):
+class SeveritySerializer(PredictionSerializer):
     """Predicted severity levels."""
-
-    id = serializers.CharField()
 
     severity = serializers.ListField(
         child=serializers.CharField(max_length=12), source="labels", required=False
     )
-    error_message = serializers.CharField(max_length=512, required=False)
 
 
 class SeverityPredictionSerializer(serializers.Serializer):
@@ -48,7 +56,8 @@ class PredictQuerySerializer(serializers.Serializer):
     """Define serializer for query parameters"""
 
     asynch = serializers.ChoiceField(
-        choices=[0, 1], help_text="run prediction in asynchronous mode",
+        choices=[0, 1],
+        help_text="run prediction in asynchronous mode",
         default=0,
-        required=False
+        required=False,
     )

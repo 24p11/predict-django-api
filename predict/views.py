@@ -17,7 +17,7 @@ from .serializers import (
     CCAMSerializer,
     RequestSerializer,
     SeverityPredictionSerializer,
-    PredictQuerySerializer,
+    PredictQuerySerializer, SeveritySerializer,
 )
 
 from .models import Prediction
@@ -134,3 +134,7 @@ class SeverityLevelsView(PredictGenericView):
 class CCAMPredictionView(generics.RetrieveAPIView):
     queryset = Prediction.objects.filter(task="ccam")
     serializer_class = CCAMSerializer
+
+class SeverityPredictionView(generics.RetrieveAPIView):
+    queryset = Prediction.objects.filter(task="severity")
+    serializer_class = SeveritySerializer

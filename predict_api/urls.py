@@ -14,17 +14,18 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.conf.urls import url
-from django.urls import include, path
 from django.contrib import admin
-
-from rest_framework import routers
-
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
+from django.urls import include, path
 from drf_yasg import openapi
-
+from drf_yasg.views import get_schema_view
+from predict.views import (
+    CCAMCodesView,
+    CCAMPredictionView,
+    SeverityLevelsView,
+    SeverityPredictionView,
+)
+from rest_framework import permissions, routers
 from users.views import UserViewSet
-from predict.views import CCAMCodesView, SeverityLevelsView, CCAMPredictionView
 
 # Routers provide an easy way of automatically determining the URL conf.
 router = routers.DefaultRouter()
@@ -45,10 +46,11 @@ internal_urls = []
 
 urlpatterns = [
     url(r"^", include(router.urls)),
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
     url(r"^docs/", schema_view),
     path("predict/ccam/", CCAMCodesView.as_view()),
     path("predict/ccam/<str:pk>/", CCAMPredictionView.as_view()),
-    url(r"^predict/severity/", SeverityLevelsView.as_view()),
+    path("predict/severity/", SeverityLevelsView.as_view()),
+    path("predict/severity/<str:pk>/", SeverityPredictionView.as_view()),
     url(r"^accounts/", include("rest_framework.urls")),
 ]

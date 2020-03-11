@@ -37,7 +37,11 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"predictions": [{"id": mock.ANY, "ccam_codes": ["XXXTEST"], "status": "done"}]},
+            {
+                "predictions": [
+                    {"id": mock.ANY, "ccam_codes": ["XXXTEST"], "status": "done"}
+                ]
+            },
         )
 
     @mock.patch("redis.Redis.rpush")
@@ -56,7 +60,11 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"predictions": [{"id": "my-custom-id", "ccam_codes": ["XXXTEST"], "status": "done"}]},
+            {
+                "predictions": [
+                    {"id": "my-custom-id", "ccam_codes": ["XXXTEST"], "status": "done"}
+                ]
+            },
         )
 
         rpush.assert_called_once_with(
@@ -147,7 +155,11 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"predictions": [{"id": mock.ANY, "severity": ["XXXTEST"]}]},
+            {
+                "predictions": [
+                    {"id": mock.ANY, "severity": ["XXXTEST"], "status": "done"}
+                ]
+            },
         )
 
         rpush.assert_called_once_with(
@@ -192,7 +204,11 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"predictions": [{"id": "test-2", "ccam_codes": ["XXXTEST"], "status": "done"}]},
+            {
+                "predictions": [
+                    {"id": "test-2", "ccam_codes": ["XXXTEST"], "status": "done"}
+                ]
+            },
         )
         mget.assert_called_with(["test-2"])
         self.assertFalse(Prediction.objects.filter(id="test-2").exists())
@@ -200,7 +216,9 @@ class TestPredictAPI(TestCase):
     def test_ccam_prediction_view(self):
         """Test retrieving persisted CCAM prediction."""
 
-        Prediction.objects.create(id="my-id", label_string="A,F", task="ccam", status="queued")
+        Prediction.objects.create(
+            id="my-id", label_string="A,F", task="ccam", status="queued"
+        )
 
         response = self.client.get(
             "/predict/ccam/my-id/", HTTP_AUTHORIZATION="Token {}".format(self.token)
@@ -209,7 +227,12 @@ class TestPredictAPI(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"id": "my-id", "ccam_codes": ["A", "F"], "error_message": None, "status": "queued"},
+            {
+                "id": "my-id",
+                "ccam_codes": ["A", "F"],
+                "error_message": None,
+                "status": "queued",
+            },
         )
 
         # non-existent id
@@ -234,3 +257,51 @@ class TestPredictAPI(TestCase):
             HTTP_AUTHORIZATION="Token {}".format(self.token),
         )
         self.assertEqual(response.status_code, 404)
+
+        # with an error message
+        Prediction.objects.create(
+            id="my-error-id",
+            label_string="ERROR",
+            task="ccam",
+            status="error",
+            error_message="prediction failed",
+        )
+
+        response = self.client.get(
+            "/predict/ccam/my-error-id/",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "id": "my-error-id",
+                "ccam_codes": ["ERROR"],
+                "error_message": "prediction failed",
+                "status": "error",
+            },
+        )
+
+    def test_severity_prediction_view(self):
+        """Test retrieving persisted severity prediction."""
+
+        Prediction.objects.create(
+            id="my-severity-id", label_string="1", task="severity", status="done"
+        )
+
+        response = self.client.get(
+            "/predict/severity/my-severity-id/",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "id": "my-severity-id",
+                "severity": ["1"],
+                "error_message": None,
+                "status": "done",
+            },
+        )
