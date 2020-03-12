@@ -212,6 +212,19 @@ class CCAMSingleModelClassifier(BertCCAMClassifier):
 
     BATCH_SIZE = 16
 
+    def load_model(self, model_dir):
+
+        self._load_tokenizer(model_dir)
+        self._load_ccam_model(model_dir)
+        self.MAX_LENGTH = self.ccam_model.config.max_position_embeddings - 2
+
+    def predict(self, documents):
+
+        tokenized_docs = self._tokenize(documents)
+        ccam_codes = self._predict_ccam(tokenized_docs)
+
+        return [{"labels": codes} for codes in ccam_codes]
+
 
 class CRHSeverityClassifier:
     """Predict GHM severity level from 'compte rendu hospitalisation' (CRH)"""

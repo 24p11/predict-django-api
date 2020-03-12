@@ -1,5 +1,9 @@
 from unittest import TestCase
-from tensorflow_worker.classifiers import BertCCAMClassifier, CRHSeverityClassifier
+from tensorflow_worker.classifiers import (
+    BertCCAMClassifier,
+    CRHSeverityClassifier,
+    CCAMSingleModelClassifier,
+)
 from django.test import tag
 
 
@@ -107,3 +111,17 @@ class CRHSeverityClassifierTests(TestCase):
         # long sentence
         prediction = classifier.predict(["Ada " * 600 + "."])
         self.assertEqual(prediction, [{"labels": ["1"]}])
+
+
+@tag("worker")
+class CCAMSingleModelClassifierTest(TestCase):
+    """Test CCAM classifier with a unique model."""
+
+    def test_predict(self):
+        "Test predict method for basic inputs"
+
+        classifier = CCAMSingleModelClassifier()
+        classifier.load_model("models/dummy_ccam_model_cmd_2")
+
+        prediction = classifier.predict(["bert"])
+        self.assertEqual(prediction, [{"labels": ("C",)}])
