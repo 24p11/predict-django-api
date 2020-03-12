@@ -46,6 +46,30 @@ class TestPredictAPI(TestCase):
 
     @mock.patch("redis.Redis.rpush")
     @mock.patch("redis.Redis.mget")
+    def test_waiting_for_prediction(self, mget, rpush):
+        """Test if server waits for the prediction without failure."""
+
+        mget.side_effect = [[None], [b'{"labels":["XXXTEST"]}']]
+
+        response = self.client.post(
+            "/predict/ccam/",
+            data=json.dumps({"inputs": [{"text": "Test"}]}),
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Token {}".format(self.token),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "predictions": [
+                    {"id": mock.ANY, "ccam_codes": ["XXXTEST"], "status": "done"}
+                ]
+            },
+        )
+
+    @mock.patch("redis.Redis.rpush")
+    @mock.patch("redis.Redis.mget")
     def test_return_same_id(self, mget, rpush):
         """Test if the same id is returned as passed with the request."""
         mget.return_value = [b'{"id":"my-custom-id", "labels":["XXXTEST"]}']

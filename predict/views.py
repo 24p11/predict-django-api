@@ -1,6 +1,7 @@
 import json
 import time
 import uuid
+import sys
 import redis
 from django.shortcuts import render
 from django.conf import settings
@@ -11,25 +12,73 @@ from rest_framework.decorators import schema
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.schemas import AutoSchema
+from rest_framework.exceptions import APIException
 
 from .serializers import (
     CCAMPredictionSerializer,
     CCAMSerializer,
     RequestSerializer,
     SeverityPredictionSerializer,
-    PredictQuerySerializer, SeveritySerializer,
+    PredictQuerySerializer,
+    SeveritySerializer,
 )
 
 from .models import Prediction
 
 import logging
 
-db = redis.Redis(host=settings.REDIS_HOST)
 SURGERY_QUEUE = settings.REDIS_SURGERY_QUEUE
 SEVERITY_QUEUE = settings.REDIS_SEVERITY_LEVEL_QUEUE
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+
+class RedisException(APIException):
+    status_code = 503
+    default_detail = "Cannot establish connection with prediction worker."
+    default_code = "redis_error"
+
+
+class RedisClient:
+    """Wrapper for redis to handle exceptions."""
+
+    def __init__(self):
+        self.db = redis.Redis(host=settings.REDIS_HOST)
+
+    def _rpush_safe(self, *args):
+        try:
+            self.db.rpush(*args)
+        except redis.RedisError:
+            logger.error("Unexpected redis error: %s", sys.exc_info()[0])
+            raise RedisException()
+
+    def push(self, *args):
+        self._rpush_safe(*args)
+
+    def _mget_safe(self, *args):
+        try:
+            data = self.db.mget(*args)
+        except redis.RedisError:
+            logger.error("Unexpected redis error: %s", sys.exc_info()[0])
+            raise RedisException()
+        return data
+
+    def poll(self, keys):
+        data = self._mget_safe(keys)
+        while None in data:
+            time.sleep(0.01)
+            data = self._mget_safe(keys)
+        return data
+
+    def mget(self, *args):
+        try:
+            self.db.mget(*args)
+        except redis.RedisError:
+            raise RedisException()
+
+
+db = RedisClient()
 
 
 class PredictGenericView(APIView):
@@ -65,7 +114,7 @@ class PredictGenericView(APIView):
                     len(prediction_requests), queue
                 )
             )
-            db.rpush(queue, *prediction_requests)
+            db.push(queue, *prediction_requests)
         else:
             return Response(input_data.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -75,14 +124,11 @@ class PredictGenericView(APIView):
             for request_id in request_ids:
                 instance, _ = Prediction.objects.get_or_create(id=request_id)
                 instance.task = self.task
-                instance.status = 'queued'
+                instance.status = "queued"
                 instance.save()
         else:
             # wait for results
-            predictions = db.mget(request_ids)
-            while None in predictions:
-                time.sleep(0.01)
-                predictions = db.mget(request_ids)
+            predictions = db.poll(request_ids)
 
         def format_response(serialized_data):
             d = json.loads(serialized_data)
@@ -134,6 +180,7 @@ class SeverityLevelsView(PredictGenericView):
 class CCAMPredictionView(generics.RetrieveAPIView):
     queryset = Prediction.objects.filter(task="ccam")
     serializer_class = CCAMSerializer
+
 
 class SeverityPredictionView(generics.RetrieveAPIView):
     queryset = Prediction.objects.filter(task="severity")

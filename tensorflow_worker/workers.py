@@ -4,6 +4,7 @@ import time
 import json
 import logging
 import os
+import sys
 from predict.models import Prediction
 
 logger = logging.getLogger(__name__)
@@ -133,4 +134,11 @@ class RedisWorker:
 
         # poll for requests
         while True:
-            self.run_loop_once(predict)
+            try:
+                self.run_loop_once(predict)
+            except redis.exceptions.ConnectionError:
+                # try to reconnect
+                logger.info("Connection to redis lost. Trying to reconnect.")
+                self.wait_for_redis()
+            except Exception:
+                logger.error("Unexpected error: %s", sys.exc_info()[0])
