@@ -29,6 +29,7 @@ class DummyClassifierTest(TestCase):
         prediction = classifier.predict(["bert"])
         self.assertEqual(prediction, [{"labels": ("C",)}])
 
+        # test with two different services
         prediction = classifier.predict(["bartosz", "bert"])
         self.assertEqual(prediction, [{"labels": ("B",)}, {"labels": ("C",)}])
 

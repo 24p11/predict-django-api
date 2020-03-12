@@ -38,6 +38,11 @@ class BertCCAMClassifier:
         self._load_service_model(service_model_path)
         self._load_tokenizer(tokenizer_path)
 
+        # postpone the loading of CCAM model until service id is known
+        self._ccam_model_service = None
+        self.ccam_model = None
+        self.ccam_encoder = None
+
     def _load_ccam_model_mapping(self, path, models_dir):
 
         with open(path) as fid:
@@ -73,7 +78,7 @@ class BertCCAMClassifier:
 
         tokens = [
             self.tokenizer.encode_plus(
-                doc,
+                doc.lower(),
                 max_length=self.MAX_LENGTH,
                 pad_to_max_length=True,
                 add_special_tokens=True,
@@ -107,18 +112,38 @@ class BertCCAMClassifier:
 
         return service_codes
 
-    def _predict_ccam(self, tokens, service_id):
-        "Predict CCAM codes knowing for the given service id"
+    def _load_ccam_model(self, model_path):
+        """Load CCAM model."""
+
+        self.ccam_model = CamembertForMultilabelClassification.from_pretrained(
+            model_path
+        )
+        self.ccam_encoder = joblib.load(os.path.join(model_path, "encoder.joblib"))
+
+    def _predict_ccam(self, tokens):
+        """Predict the CCAM codes with loaded model"""
+
+        assert (
+            self.ccam_model and self.ccam_encoder
+        ), "CCAM model not loaded. Call _load_call_model"
 
         dataset = self._make_dataset(tokens)
 
-        model_path = self.model_mapping[service_id]
-        ccam_model = CamembertForMultilabelClassification.from_pretrained(model_path)
-        encoder = joblib.load(os.path.join(model_path, "encoder.joblib"))
-
-        output = ccam_model.predict(dataset)
+        output = self.ccam_model.predict(dataset)
         indicators = output > 0.5
-        ccam_codes = encoder.inverse_transform(indicators)
+        ccam_codes = self.ccam_encoder.inverse_transform(indicators)
+
+        return ccam_codes
+
+    def _predict_ccam_for_service(self, tokens, service_id):
+        "Predict CCAM codes knowing for the given service id"
+
+        if self._ccam_model_service != service_id:
+            self._ccam_model_service = service_id
+            model_path = self.model_mapping[service_id]
+            self._load_ccam_model(model_path)
+
+        ccam_codes = self._predict_ccam(tokens)
 
         return ccam_codes
 
@@ -144,7 +169,7 @@ class BertCCAMClassifier:
             service_docs = list(group)
             tokens = [doc["tokens"] for doc in service_docs]
 
-            ccam_codes = self._predict_ccam(tokens, service_id)
+            ccam_codes = self._predict_ccam_for_service(tokens, service_id)
             for ccam, doc in zip(ccam_codes, service_docs):
                 doc["ccam_codes"] = ccam
             labeled_documents.extend(service_docs)
@@ -181,11 +206,11 @@ class BertCCAMClassifier:
 
         return results
 
+
 class CCAMSingleModelClassifier(BertCCAMClassifier):
     """Predict CCAM from a unique model for all services."""
 
     BATCH_SIZE = 16
-
 
 
 class CRHSeverityClassifier:
@@ -208,13 +233,12 @@ class CRHSeverityClassifier:
         )
         model_path = os.path.join(model_path, "sentence_model")
 
-        if os.path.exists(model_path + '.h5'):
+        if os.path.exists(model_path + ".h5"):
             # HDF5 format
-            self.sentence_model = tf.keras.models.load_model(model_path + '.h5')
+            self.sentence_model = tf.keras.models.load_model(model_path + ".h5")
         else:
             # SavedModel (TF) format
             self.sentence_model = tf.keras.models.load_model(model_path)
-       
 
     def predict(self, documents):
         """Predict severity level from raw text documents."""
