@@ -28,7 +28,7 @@ class BertCCAMClassifier:
 
         model_mapping_path = os.path.join(models_dir, "model_mapping.json")
 
-        models_conf = self._load_ccam_model_mapping(model_mapping_path, models_dir)
+        models_conf = self._load_ccam_model_mapping(model_mapping_path)
 
         service_model_path = os.path.join(
             models_dir, models_conf["service_model"]["path"]
@@ -43,12 +43,16 @@ class BertCCAMClassifier:
         self.ccam_model = None
         self.ccam_encoder = None
 
-    def _load_ccam_model_mapping(self, path, models_dir):
+    def _load_ccam_model_mapping(self, path):
+
+        models_dir, _ = os.path.split(path)
 
         with open(path) as fid:
             models_conf = json.load(fid)
 
         self.model_mapping = {}
+
+        logger.debug("Loading model mapping from %s", path)
 
         for ccam_model in models_conf["ccam_models"]:
             service_id = ccam_model["service_id"]
@@ -59,12 +63,14 @@ class BertCCAMClassifier:
         return models_conf
 
     def _load_tokenizer(self, tokenizer_path):
+        logger.debug("loading tokenizer from %s", tokenizer_path)
 
         self.tokenizer = CamembertTokenizer.from_pretrained(tokenizer_path)
 
     def _load_service_model(self, service_model_path):
 
         encoder_path = os.path.join(service_model_path, "encoder.joblib")
+        logger.debug("loading CMD model from %s", service_model_path)
 
         self.service_model = TFCamembertForSequenceClassification.from_pretrained(
             service_model_path
@@ -114,6 +120,8 @@ class BertCCAMClassifier:
 
     def _load_ccam_model(self, model_path):
         """Load CCAM model."""
+
+        logger.debug("loading CCAM model from %s", model_path)
 
         self.ccam_model = CamembertForMultilabelClassification.from_pretrained(
             model_path

@@ -45,7 +45,7 @@ class IntegrationTests(TestCase):
         )
 
         prediction_id = response_data['predictions'][0]['id']
-        time.sleep(1.)
+        time.sleep(5.)
         response = requests.get(
             "http://web:8000/predict/ccam/{}/".format(prediction_id),
             headers={"Authorization": "Token " + self.API_TOKEN},
@@ -66,6 +66,6 @@ class IntegrationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"predictions": [{"severity": ["3"], "id": mock.ANY}]},
+            {"predictions": [{"severity": ["3"], "id": mock.ANY, "status": "done"}]},
         )
 
