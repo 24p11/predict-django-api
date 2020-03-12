@@ -26,7 +26,21 @@ class BertCCAMClassifier:
     def load_model(self, models_dir):
         "Load model."
 
-        with open(os.path.join(models_dir, "model_mapping.json")) as fid:
+        model_mapping_path = os.path.join(models_dir, "model_mapping.json")
+
+        models_conf = self._load_ccam_model_mapping(model_mapping_path, models_dir)
+
+        service_model_path = os.path.join(
+            models_dir, models_conf["service_model"]["path"]
+        )
+        tokenizer_path = os.path.join(models_dir, models_conf["tokenizer"]["path"])
+
+        self._load_service_model(service_model_path)
+        self._load_tokenizer(tokenizer_path)
+
+    def _load_ccam_model_mapping(self, path, models_dir):
+
+        with open(path) as fid:
             models_conf = json.load(fid)
 
         self.model_mapping = {}
@@ -37,11 +51,15 @@ class BertCCAMClassifier:
 
             self.model_mapping[service_id] = model_path
 
-        service_model_path = os.path.join(
-            models_dir, models_conf["service_model"]["path"]
-        )
+        return models_conf
+
+    def _load_tokenizer(self, tokenizer_path):
+
+        self.tokenizer = CamembertTokenizer.from_pretrained(tokenizer_path)
+
+    def _load_service_model(self, service_model_path):
+
         encoder_path = os.path.join(service_model_path, "encoder.joblib")
-        tokenizer_path = os.path.join(models_dir, models_conf["tokenizer"]["path"])
 
         self.service_model = TFCamembertForSequenceClassification.from_pretrained(
             service_model_path
@@ -50,7 +68,6 @@ class BertCCAMClassifier:
         self.MAX_LENGTH = self.service_model.config.max_position_embeddings - 2
 
         self.service_encoder = joblib.load(encoder_path)
-        self.tokenizer = CamembertTokenizer.from_pretrained(tokenizer_path)
 
     def _tokenize(self, valid_documents):
 
@@ -163,6 +180,12 @@ class BertCCAMClassifier:
             results[doc["id"]]["labels"] = doc["ccam_codes"]
 
         return results
+
+class CCAMSingleModelClassifier(BertCCAMClassifier):
+    """Predict CCAM from a unique model for all services."""
+
+    BATCH_SIZE = 16
+
 
 
 class CRHSeverityClassifier:
